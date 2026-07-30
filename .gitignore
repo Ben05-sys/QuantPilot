@@ -1,0 +1,23 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# PyInstaller
+build/
+dist/
+*.spec.bak
+
+# Local data lives in ~/.pilotmarkets, never in the repo — but guard
+# against anyone pointing PILOTMARKETS_HOME at the working tree.
+*.db
+*.db-wal
+*.db-shm
+.pilotmarkets/
+
+# scratch — stray captures and debug logs, but not the README's screenshots
+*.png
+!docs/*.png
+*.log
+.DS_Store
