@@ -359,6 +359,19 @@ Good first issues: un-parking the options view (`app/options.py` and
 `providers/cboe.py` are written and tested, they just need a route and a
 view), indicators inside the expression engine, and a macOS build.
 
+## Licence
+
+**GNU AGPL-3.0** — see [LICENSE](LICENSE).
+
+Use it, read it, fork it, change it. The one condition: if you distribute a
+modified version, **or run one as a service other people can reach over a
+network**, you have to publish your source under the same licence. That
+network clause is the whole reason for choosing AGPL over MIT — it means
+nobody can take this closed and sell it back as a hosted product.
+
+For ordinary use — running it on your own machine, hacking on it, sending a
+pull request — it asks nothing of you.
+
 ## A caveat worth reading
 
 Yahoo's endpoints are undocumented and its terms prohibit automated access and
