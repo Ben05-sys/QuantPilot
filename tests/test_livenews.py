@@ -1,4 +1,4 @@
-"""Live TV: channel probing and, mostly, ticker extraction.
+"""Live news: channel probing and, mostly, ticker extraction.
 
 The extraction is the part worth testing hard. It reads free text and
 asserts which companies it is about, and the failure that matters is not
@@ -16,11 +16,11 @@ import sys
 import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-os.environ["QUANTPILOT_HOME"] = tempfile.mkdtemp(prefix="qp-livetv-")
+os.environ["QUANTPILOT_HOME"] = tempfile.mkdtemp(prefix="qp-livenews-")
 
 import pandas as pd  # noqa: E402
 
-from app import livetv  # noqa: E402
+from app import livenews  # noqa: E402
 
 PASS = FAIL = 0
 
@@ -58,7 +58,7 @@ def frame():
 
 
 def syms(text, df=None):
-    return sorted(h["symbol"] for h in livetv.mentioned(text, df or frame()))
+    return sorted(h["symbol"] for h in livenews.mentioned(text, df or frame()))
 
 
 def main():
@@ -96,13 +96,13 @@ def main():
     check("text about nothing", syms("no companies here at all") == [])
 
     print("\ndegrades rather than raises")
-    check("a None frame", livetv.mentioned("Nvidia", None) == [])
-    check("an empty frame", livetv.mentioned("Nvidia", pd.DataFrame()) == [])
+    check("a None frame", livenews.mentioned("Nvidia", None) == [])
+    check("an empty frame", livenews.mentioned("Nvidia", pd.DataFrame()) == [])
     check("a frame with no name column",
-          livetv.mentioned("Nvidia", pd.DataFrame({"symbol": ["NVDA"]})) == [])
+          livenews.mentioned("Nvidia", pd.DataFrame({"symbol": ["NVDA"]})) == [])
 
     print("\nwhat comes back")
-    hits = livetv.mentioned("Nvidia and Eli Lilly", frame())
+    hits = livenews.mentioned("Nvidia and Eli Lilly", frame())
     check("the mover leads", hits[0]["symbol"] == "LLY",
           [h["symbol"] for h in hits])          # -4.5 outranks +2.6
     check("how it was found is reported",
@@ -110,49 +110,49 @@ def main():
     check("the move rides along", hits[0]["change_pct"] == -4.5)
     nan = frame()
     nan.loc[0, "change_pct"] = float("nan")
-    got = livetv.mentioned("Nvidia", nan)
+    got = livenews.mentioned("Nvidia", nan)
     check("NaN stays null rather than becoming zero",
           got[0]["change_pct"] is None, got)
 
     print("\ncompany roots")
     check("suffixes are stripped",
-          livetv._company_root("Microsoft Corporation Common Stock")
+          livenews._company_root("Microsoft Corporation Common Stock")
           == "microsoft")
     check("dot-com is stripped",
-          livetv._company_root("Amazon.com Inc.") == "amazon")
+          livenews._company_root("Amazon.com Inc.") == "amazon")
     check("a two-word root survives",
-          livetv._company_root("Eli Lilly and Company") == "eli lilly")
+          livenews._company_root("Eli Lilly and Company") == "eli lilly")
 
     print("\nchannel probing")
     live_html = '"isLiveNow":true "videoId":"abcdefghijk" ' \
                 '<meta name="title" content="Markets Live"> "viewCount":"4200"'
-    livetv.net.fetch = lambda *a, **k: live_html.encode()
-    d = livetv.channels()
-    check("every channel is reported", len(d["channels"]) == len(livetv.CHANNELS))
-    check("all live when the page says so", d["live_count"] == len(livetv.CHANNELS))
+    livenews.net.fetch = lambda *a, **k: live_html.encode()
+    d = livenews.channels()
+    check("every channel is reported", len(d["channels"]) == len(livenews.CHANNELS))
+    check("all live when the page says so", d["live_count"] == len(livenews.CHANNELS))
     check("a default is chosen", d["default"] is not None)
     check("the video id is picked up",
           d["channels"][0]["video_id"] == "abcdefghijk")
     check("viewers are picked up", d["channels"][0]["viewers"] == 4200)
 
-    livetv.net.fetch = lambda *a, **k: b"just a channel page, nobody on air"
-    d = livetv.channels()
+    livenews.net.fetch = lambda *a, **k: b"just a channel page, nobody on air"
+    d = livenews.channels()
     check("nothing live is a real answer, not an error", d["live_count"] == 0)
     check("and there is no default to open",
           d["default"] is None, d["default"])
 
     def boom(*a, **k):
         raise RuntimeError("upstream down")
-    livetv.net.fetch = boom
-    d = livetv.channels()
+    livenews.net.fetch = boom
+    d = livenews.channels()
     check("a dead upstream does not take the view down",
-          d["live_count"] == 0 and len(d["channels"]) == len(livetv.CHANNELS))
+          d["live_count"] == 0 and len(d["channels"]) == len(livenews.CHANNELS))
     check("and the reason is reported rather than swallowed",
           d["channels"][0]["error"] == "RuntimeError",
           d["channels"][0]["error"])
 
     print("\nembed url")
-    u = livetv.embed_url("abcdefghijk")
+    u = livenews.embed_url("abcdefghijk")
     check("points at the official embed on the no-cookie host",
           u.startswith("https://www.youtube-nocookie.com/embed/abcdefghijk"), u)
     check("never the cookie-setting host", "//www.youtube.com/" not in u, u)

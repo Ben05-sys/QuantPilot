@@ -110,7 +110,7 @@ def main():
         html = r.read().decode("utf-8")
     check("index.html is served", r.status == 200 and "PILOT MARKETS" in html)
     check("the launch token is injected", f'window.PM_TOKEN="{token}"' in html)
-    # The page still loads nothing third-party *at rest*. The live TV view
+    # The page still loads nothing third-party *at rest*. The live news view
     # is the one exception and it is deliberate: an embedded broadcast is
     # the whole feature. It is held to three conditions, all checked here,
     # because "self-contained" quietly becoming "self-contained except for

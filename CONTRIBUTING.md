@@ -27,7 +27,7 @@ Plain scripts with asserts, no pytest. Run them from the repo root:
 ```bash
 python tests/test_screen.py    python tests/test_store.py     python tests/test_clock.py
 python tests/test_diffs.py     python tests/test_options.py   python tests/test_stream.py
-python tests/test_server.py    python tests/test_livetv.py
+python tests/test_server.py    python tests/test_livenews.py
 
 cd tests && npm install jsdom && cd ..
 node tests/ui_smoke.js
@@ -70,7 +70,7 @@ executes attribute access and would happily run `@__import__`.
 
 **4. The terminal is local.** The server binds loopback, checks the `Host`
 header, and requires a per-launch token. The only third party the page contacts
-is the YouTube embed in the live TV view, and `tests/test_server.py` enumerates
+is the YouTube embed in the live news view, and `tests/test_server.py` enumerates
 every permitted external host so that cannot quietly widen. The article reader
 takes a **story id, never a URL** — a route that fetched whatever address it was
 handed would be an open proxy running on someone's machine.

@@ -109,9 +109,9 @@ setTimeout(() => {
         tabs.every(v => v === "help" || doc.getElementById("view-" + v)),
         tabs.join(","));
   check("ten tabs in the rail", tabs.length === 10, String(tabs.length));
-  check("the live tv view is reachable and has a player and a rail",
-        !!doc.getElementById("view-tv") && !!doc.getElementById("tvPlayer")
-        && !!doc.getElementById("tvMentions"));
+  check("the live news view is reachable and has a player and a rail",
+        !!doc.getElementById("view-livenews") && !!doc.getElementById("lnPlayer")
+        && !!doc.getElementById("lnMentions"));
   check("futures strip exists", !!doc.getElementById("futures"));
   check("watch panel exists", !!doc.getElementById("watchPanel"));
 

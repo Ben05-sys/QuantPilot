@@ -115,7 +115,7 @@ a stock down 17% outranks a fresh opinion column, and roundups tagged with
 eight tickers are discounted. Every row carries the ticker it is about and
 that ticker's move.
 
-**Live TV** (`F10`) — the US finance networks, embedded from their own
+**Live news** (`F10`) — the US finance networks, embedded from their own
 channels: Bloomberg Television, Yahoo Finance, Schwab Network, Benzinga,
 Fox Business, CNBC, Reuters. Who is actually on air is read from each
 channel rather than assumed, so the wall shows a green dot against the ones
@@ -308,7 +308,7 @@ app/
   options.py          chain shaping and unusual-activity ranking (parked)
   watchlist.py        thin layer over the positions table
   tray.py             Win32 tray icon and Ctrl+Alt+M, pure ctypes
-  livetv.py           which finance networks are on air, and who they name
+  livenews.py           which finance networks are on air, and who they name
   server.py           stdlib HTTP + SSE, 23 routes
   web/index.html      the entire terminal, self-contained
   providers/          nasdaq · yahoo · cboe · sec, behind one Protocol
