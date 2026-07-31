@@ -1,4 +1,4 @@
-"""PilotMarkets — a local market terminal.
+"""QuantPilot — a local market terminal.
 
 Finviz-class screening over the whole US universe, Bloomberg-style chrome,
 no API keys and no vendor. The data layer (net/store/universe/providers)

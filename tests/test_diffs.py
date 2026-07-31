@@ -13,8 +13,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-TMP = Path(tempfile.mkdtemp(prefix="pilotmarkets-diff-"))
-os.environ["PILOTMARKETS_HOME"] = str(TMP)
+TMP = Path(tempfile.mkdtemp(prefix="quantpilot-diff-"))
+os.environ["QUANTPILOT_HOME"] = str(TMP)
 
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402

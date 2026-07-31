@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Storage tests against a throwaway database.
 
-PILOTMARKETS_HOME is redirected before app.config is imported, so this
-never touches the real ~/.pilotmarkets.
+QUANTPILOT_HOME is redirected before app.config is imported, so this
+never touches the real ~/.quantpilot.
 
     python tests/test_store.py
 """
@@ -16,8 +16,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-TMP = Path(tempfile.mkdtemp(prefix="pilotmarkets-test-"))
-os.environ["PILOTMARKETS_HOME"] = str(TMP)
+TMP = Path(tempfile.mkdtemp(prefix="quantpilot-test-"))
+os.environ["QUANTPILOT_HOME"] = str(TMP)
 
 from app import screen, store  # noqa: E402
 

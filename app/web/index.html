@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PilotMarkets</title>
+<title>QuantPilot</title>
 <style>
 /* ------------------------------------------------------------------
    Bloomberg chrome, Finviz density.
@@ -710,12 +710,12 @@ h3.hd{color:var(--amber);letter-spacing:.12em;margin:12px 0 4px}
   <!-- AGPL section 13: software reachable over a network has to offer its
        users the source. This is that offer, and the licence is the reason
        it exists rather than being decoration. -->
-  <p class="dim">PilotMarkets is free software under the
+  <p class="dim">QuantPilot is free software under the
   <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank"
      rel="noopener" class="amber">GNU AGPL-3.0</a> — no warranty, express or
   implied. Source:
-  <a href="https://github.com/Ben05-sys/PilotMarkets" target="_blank"
-     rel="noopener" class="amber">github.com/Ben05-sys/PilotMarkets</a></p>
+  <a href="https://github.com/Ben05-sys/QuantPilot" target="_blank"
+     rel="noopener" class="amber">github.com/Ben05-sys/QuantPilot</a></p>
 </div></div>
 
 <script>
@@ -2699,7 +2699,10 @@ function applyExpr(expr){
    Rebuilding your filters on every reload is the difference between a
    tool and a demo. Versioned, so a future change discards old state
    cleanly instead of half-restoring it into a crash. */
-const UI_KEY = "pilotmarkets.ui.v1";
+const UI_KEY = "quantpilot.ui.v1";
+// Read-through for layouts saved before the rename, so filters, sort and
+// view survive it. Dropped once, on the next save under the new key.
+const UI_KEY_LEGACY = "pilotmarkets.ui.v1";
 let saveTimer = null;
 
 function saveUi(immediate){
@@ -2732,7 +2735,8 @@ window.addEventListener("beforeunload", ()=>saveUi(true));
 
 function loadUi(){
   let saved = null;
-  try{ saved = JSON.parse(localStorage.getItem(UI_KEY) || "null"); }
+  try{ saved = JSON.parse(localStorage.getItem(UI_KEY)
+                          || localStorage.getItem(UI_KEY_LEGACY) || "null"); }
   catch(e){ saved = null; }
   if(!saved || typeof saved !== "object") return null;
   S.filters = (saved.filters && typeof saved.filters === "object")

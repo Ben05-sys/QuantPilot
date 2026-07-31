@@ -1,4 +1,4 @@
-# PilotMarkets. Three dependencies, all of them load-bearing.
+# QuantPilot. Three dependencies, all of them load-bearing.
 #
 # Unlike OfflinePilotX, this project is not stdlib-only: screening 7,000
 # symbols row-by-row in pure Python is roughly two orders of magnitude

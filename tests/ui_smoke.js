@@ -320,7 +320,7 @@ setTimeout(() => {
     S.news.strict = true;
     saveUi(true);
   `);
-  const raw = win.localStorage.getItem("pilotmarkets.ui.v1");
+  const raw = win.localStorage.getItem("quantpilot.ui.v1");
   check("state is written to localStorage", !!raw);
   const stored = JSON.parse(raw || "{}");
   check("filters are stored", stored.filters.cap === "Large >10B");
@@ -333,7 +333,7 @@ setTimeout(() => {
         win.eval("(function(){S.filters={};S.expr='';loadUi();"
                  + "return S.expr + '|' + S.filters.cap + '|' + S.sort;})()")
         === "chg > 3|Large >10B|volume");
-  win.localStorage.setItem("pilotmarkets.ui.v1", "{not json");
+  win.localStorage.setItem("quantpilot.ui.v1", "{not json");
   check("corrupt saved state is discarded, not fatal",
         win.eval("(function(){try{return loadUi()===null;}"
                  + "catch(e){return 'threw: '+e.message;}})()") === true);

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate assets/pilotmarkets.ico with the standard library only.
+"""Generate assets/quantpilot.ico with the standard library only.
 
 An amber candlestick on black, at the four sizes Windows asks for. Writing
 the ICO by hand avoids adding Pillow as a dependency for one 15KB file
@@ -79,7 +79,7 @@ def main() -> int:
         offset += len(data)
     out.extend(data for _, data in frames)
 
-    path = Path(__file__).resolve().parents[1] / "assets" / "pilotmarkets.ico"
+    path = Path(__file__).resolve().parents[1] / "assets" / "quantpilot.ico"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(b"".join(out))
     print(f"wrote {path} ({path.stat().st_size:,} bytes, "

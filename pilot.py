@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PilotMarkets launcher.
+"""QuantPilot launcher.
 
     python pilot.py                    # terminal at http://127.0.0.1:8900
     python pilot.py --refresh          # rebuild the snapshot, then exit
@@ -34,7 +34,7 @@ def refresh(args) -> int:
         sys.stdout.write(f"\r  [{bar}] {frac * 100:5.1f}%  {message[:44]:<44}")
         sys.stdout.flush()
 
-    print(f"\n  PilotMarkets — rebuilding the universe"
+    print(f"\n  QuantPilot — rebuilding the universe"
           f"{f' (top {limit})' if limit else ''}\n")
     try:
         result = universe.refresh(progress=progress, limit=limit)
@@ -49,7 +49,7 @@ def refresh(args) -> int:
 
 
 def install_shortcut(desktop_only: bool = False) -> int:
-    """Put PilotMarkets on the Desktop and in the Start Menu.
+    """Put QuantPilot on the Desktop and in the Start Menu.
 
     Built through WScript.Shell rather than a .lnk written by hand, so
     Windows gets a real shortcut with an icon and a working directory. No
@@ -59,7 +59,7 @@ def install_shortcut(desktop_only: bool = False) -> int:
     import subprocess
 
     root = Path(__file__).resolve().parent
-    icon = root / "assets" / "pilotmarkets.ico"
+    icon = root / "assets" / "quantpilot.ico"
     if not icon.is_file():
         print("  building the icon first…")
         subprocess.run([sys.executable, str(root / "tools" / "make_icon.py")],
@@ -71,10 +71,10 @@ def install_shortcut(desktop_only: bool = False) -> int:
     pyw = exe.with_name("pythonw.exe")
     target = pyw if pyw.is_file() else exe
 
-    targets = [Path(os.path.expanduser("~/Desktop")) / "PilotMarkets.lnk"]
+    targets = [Path(os.path.expanduser("~/Desktop")) / "QuantPilot.lnk"]
     if not desktop_only:
         start = Path(os.environ.get("APPDATA", "")) / (
-            "Microsoft/Windows/Start Menu/Programs/PilotMarkets.lnk")
+            "Microsoft/Windows/Start Menu/Programs/QuantPilot.lnk")
         if start.parent.is_dir():
             targets.append(start)
 
@@ -87,7 +87,7 @@ def install_shortcut(desktop_only: bool = False) -> int:
             f"$l.Arguments = '\"{root / 'pilot.py'}\"'; "
             f"$l.WorkingDirectory = '{root}'; "
             f"$l.IconLocation = '{icon}'; "
-            "$l.Description = 'PilotMarkets — local market terminal'; "
+            "$l.Description = 'QuantPilot — local market terminal'; "
             "$l.Save()"
         )
         result = subprocess.run(

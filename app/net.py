@@ -44,8 +44,8 @@ def sec_ua() -> str:
         raise ContactRequired(
             "SEC filings need a contact address. Put your email in "
             f"{config.config_path()} as \"sec_contact\", or set "
-            "PILOTMARKETS_SEC_CONTACT. Everything else works without it.")
-    return f"PilotMarkets/0.1 ({contact})"
+            "QUANTPILOT_SEC_CONTACT. Everything else works without it.")
+    return f"QuantPilot/0.1 ({contact})"
 
 
 class RateLimiter:

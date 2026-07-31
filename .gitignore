@@ -9,11 +9,12 @@ build/
 dist/
 *.spec.bak
 
-# Local data lives in ~/.pilotmarkets, never in the repo — but guard
-# against anyone pointing PILOTMARKETS_HOME at the working tree.
+# Local data lives in ~/.quantpilot, never in the repo — but guard
+# against anyone pointing QUANTPILOT_HOME at the working tree.
 *.db
 *.db-wal
 *.db-shm
+.quantpilot/
 .pilotmarkets/
 
 # scratch — stray captures and debug logs, but not the README's screenshots
@@ -21,3 +22,8 @@ dist/
 !docs/*.png
 *.log
 .DS_Store
+
+# jsdom for tests/ui_smoke.js — a local dev dependency, never committed
+tests/node_modules/
+tests/package-lock.json
+tests/package.json

@@ -1,10 +1,10 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""PyInstaller spec for PilotMarkets.
+"""PyInstaller spec for QuantPilot.
 
     pip install pyinstaller
-    pyinstaller PilotMarkets.spec
+    pyinstaller QuantPilot.spec
 
-Produces dist/PilotMarkets.exe — a single windowed binary with the web UI
+Produces dist/QuantPilot.exe — a single windowed binary with the web UI
 and the icon bundled in.
 
 Two things worth knowing:
@@ -70,7 +70,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='PilotMarkets',
+    name='QuantPilot',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -83,5 +83,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='assets/pilotmarkets.ico',
+    icon='assets/quantpilot.ico',
 )

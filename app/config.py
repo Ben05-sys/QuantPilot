@@ -9,9 +9,16 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 from pathlib import Path
 
-APP_NAME = "PilotMarkets"
+APP_NAME = "QuantPilot"
+
+# The project was called PilotMarkets until 2026-07-31. The old data
+# directory holds the append-only snapshot history, which is the one thing
+# here that cannot be rebuilt — it accumulates a generation at a time and
+# there is no way to back-fill a day you did not record. So the rename
+# carries it across instead of silently starting from an empty database.
 
 DEFAULTS = {
     "host": "127.0.0.1",
@@ -30,7 +37,7 @@ DEFAULTS = {
     # has to put their own address in — a hard-coded one would quietly
     # identify the author on someone else's machine, and any rate-limit
     # complaint would land on the wrong person. Set it in
-    # ~/.pilotmarkets/config.json or via PILOTMARKETS_SEC_CONTACT.
+    # ~/.quantpilot/config.json or via QUANTPILOT_SEC_CONTACT.
     # Everything except the SEC filings panel works without it.
     "sec_contact": "",
     # Rows returned to the grid per screen run. The grid virtualizes, but
@@ -41,7 +48,34 @@ DEFAULTS = {
 
 
 def data_dir() -> Path:
-    d = Path(os.environ.get("PILOTMARKETS_HOME", Path.home() / ".pilotmarkets"))
+    """~/.quantpilot, migrating ~/.pilotmarkets into it once if it is there.
+
+    `PILOTMARKETS_HOME` is still honoured after `QUANTPILOT_HOME` so an
+    existing install, script or test keeps working through the rename.
+    """
+    override = os.environ.get("QUANTPILOT_HOME") or os.environ.get(
+        "PILOTMARKETS_HOME")
+    if override:
+        d = Path(override)
+        d.mkdir(parents=True, exist_ok=True)
+        return d
+
+    d = Path.home() / ".quantpilot"
+    legacy = Path.home() / ".pilotmarkets"
+    # Only when the new one does not exist yet: if both are present the
+    # user made the new one deliberately and moving over it would clobber
+    # whichever is newer. Idempotent — after the first run `d` exists and
+    # this is one `exists()` call.
+    if not d.exists() and legacy.is_dir():
+        try:
+            shutil.move(str(legacy), str(d))
+            print(f"[config] moved {legacy} -> {d} (project renamed)")
+        except OSError as exc:
+            # Better to run against the old directory than to lose the
+            # history or refuse to start.
+            print(f"[config] could not migrate {legacy}: {exc}")
+            legacy.mkdir(parents=True, exist_ok=True)
+            return legacy
     d.mkdir(parents=True, exist_ok=True)
     return d
 
@@ -69,7 +103,9 @@ def load_config() -> dict:
         except (OSError, json.JSONDecodeError) as exc:
             print(f"[config] ignoring unreadable {p}: {exc}")
     for key in cfg:
-        env = os.environ.get(f"PILOTMARKETS_{key.upper()}")
+        env = os.environ.get(f"QUANTPILOT_{key.upper()}")
+        if env is None:
+            env = os.environ.get(f"PILOTMARKETS_{key.upper()}")
         if env is not None:
             cfg[key] = type(cfg[key])(env) if not isinstance(cfg[key], bool) else env == "1"
     return cfg

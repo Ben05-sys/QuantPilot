@@ -491,7 +491,7 @@ class AppState:
 class Handler(BaseHTTPRequestHandler):
     state: AppState  # bound by make_server()
     protocol_version = "HTTP/1.1"
-    server_version = "PilotMarkets"
+    server_version = "QuantPilot"
 
     def log_message(self, fmt, *args):
         pass
@@ -1255,7 +1255,7 @@ def main(argv=None) -> int:
         server = make_server(port=port, config=config)
     except OSError:
         url = f"http://127.0.0.1:{port}"
-        print(f"PilotMarkets already running  ->  {url}")
+        print(f"QuantPilot already running  ->  {url}")
         open_window(url)
         return 0
 
@@ -1267,7 +1267,7 @@ def main(argv=None) -> int:
 
     meta = store.snapshot_meta()
     url = f"http://127.0.0.1:{port}"
-    print(f"\n  PilotMarkets  ->  {url}")
+    print(f"\n  QuantPilot  ->  {url}")
     if meta:
         age = (time.time() - meta["snapshot_ts"]) / 60
         print(f"  snapshot: {meta['rows']} symbols, {age:.0f} min old")

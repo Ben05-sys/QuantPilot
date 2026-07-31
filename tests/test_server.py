@@ -22,8 +22,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-TMP = Path(tempfile.mkdtemp(prefix="pilotmarkets-srv-"))
-os.environ["PILOTMARKETS_HOME"] = str(TMP)
+TMP = Path(tempfile.mkdtemp(prefix="quantpilot-srv-"))
+os.environ["QUANTPILOT_HOME"] = str(TMP)
 
 from app import screen, server, store, universe  # noqa: E402
 

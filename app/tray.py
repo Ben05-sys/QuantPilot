@@ -75,7 +75,7 @@ def icon_path() -> Path | None:
     base = (Path(getattr(sys, "_MEIPASS", ""))
             if getattr(sys, "frozen", False)
             else Path(__file__).resolve().parents[1])
-    ico = base / "assets" / "pilotmarkets.ico"
+    ico = base / "assets" / "quantpilot.ico"
     return ico if ico.is_file() else None
 
 
@@ -107,7 +107,7 @@ def _run(url: str, state=None) -> None:
                 open_app()
             elif event == WM_RBUTTONUP:
                 menu = user32.CreatePopupMenu()
-                user32.AppendMenuW(menu, 0, CMD_OPEN, "Open PilotMarkets")
+                user32.AppendMenuW(menu, 0, CMD_OPEN, "Open QuantPilot")
                 user32.AppendMenuW(menu, 0, CMD_REFRESH, "Refresh universe")
                 user32.AppendMenuW(menu, 0x800, 0, None)  # separator
                 user32.AppendMenuW(menu, 0, CMD_QUIT, "Quit")
@@ -139,10 +139,10 @@ def _run(url: str, state=None) -> None:
     wc.lpfnWndProc = proc
     wc.hInstance = hinst
     # Distinct from OfflinePilotX's class so both can sit in the tray.
-    wc.lpszClassName = "PilotMarketsTray"
+    wc.lpszClassName = "QuantPilotTray"
     if not user32.RegisterClassW(ctypes.byref(wc)):
         return
-    hwnd = user32.CreateWindowExW(0, wc.lpszClassName, "PilotMarkets",
+    hwnd = user32.CreateWindowExW(0, wc.lpszClassName, "QuantPilot",
                                   0, 0, 0, 0, 0, None, None, hinst, None)
     if not hwnd:
         return
@@ -161,7 +161,7 @@ def _run(url: str, state=None) -> None:
     nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP
     nid.uCallbackMessage = WM_APP_TRAY
     nid.hIcon = hicon
-    nid.szTip = "PilotMarkets — Ctrl+Alt+M to summon"
+    nid.szTip = "QuantPilot — Ctrl+Alt+M to summon"
     shell32.Shell_NotifyIconW(NIM_ADD, ctypes.byref(nid))
 
     # Ctrl+Alt+M, falling back to Ctrl+Alt+K if something else owns it.

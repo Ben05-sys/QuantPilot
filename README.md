@@ -1,4 +1,4 @@
-# PilotMarkets
+# QuantPilot
 
 A local market terminal: Finviz-class screening over the whole US universe,
 Bloomberg-style chrome, no API keys, no vendor, no monthly bill.
@@ -29,14 +29,14 @@ Two optional things:
 
 - **SEC filings.** The 10-K/10-Q panel in the ticker view needs a contact
   address, because SEC requires one in the User-Agent and returns 403
-  without it. Put your own email in `~/.pilotmarkets/config.json`:
+  without it. Put your own email in `~/.quantpilot/config.json`:
   `{"sec_contact": "you@example.com"}`. Everything else works without it.
 - **Live ticks.** `yfinance`, `websockets` and `protobuf` are in
   `requirements.txt` and give you the streaming price feed. Leave them out
   and the terminal falls back to polling — slower, but it says so in the
   header rather than pretending.
 
-All data lives in `~/.pilotmarkets`. Delete that folder to reset; nothing
+All data lives in `~/.quantpilot`. Delete that folder to reset; nothing
 is written anywhere else.
 
 ```bash
@@ -260,9 +260,9 @@ free. `store.prune_snapshots()` keeps the most recent 90.
 
 ```
 pilot.py              launcher · --refresh · --install-shortcut
-PilotMarkets.spec     PyInstaller
+QuantPilot.spec     PyInstaller
 app/
-  config.py           settings, ~/.pilotmarkets/, port 8900
+  config.py           settings, ~/.quantpilot/, port 8900
   net.py              rate-limited, disk-cached HTTP, per-host User-Agent
   store.py            SQLite: snapshots, screens, bars, positions
   universe.py         Nasdaq list + Yahoo enrichment -> snapshot -> pandas
@@ -282,7 +282,7 @@ tools/make_icon.py    generates the .ico with the stdlib alone
 tests/                plain scripts, no pytest (plus one jsdom smoke test)
 ```
 
-Data lives in `~/.pilotmarkets/` (`market.db`, `httpcache.db`, `config.json`).
+Data lives in `~/.quantpilot/` (`market.db`, `httpcache.db`, `config.json`).
 Nothing is written inside the repo.
 
 ## Tests
