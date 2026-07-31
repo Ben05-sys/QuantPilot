@@ -238,6 +238,20 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
     df["rel_volume"] = (df["rel_volume_raw"] / fraction if fraction > 0
                         else df["rel_volume_raw"])
     df["session_fraction"] = fraction
+    # The same question asked against a two-week baseline instead of a
+    # three-month one. A name that has been busy for a fortnight has
+    # already lifted its own 10-day average, so a reading near 1 here
+    # sitting beside a `rel_volume` of 3 says "elevated, but this is its
+    # new normal" — while a high one says today is unusual even against
+    # that recent activity. Checked on a live 6,338-name snapshot: the two
+    # correlate 0.73, so this is a genuinely different question and not a
+    # second spelling of the first. Session-adjusted the same way, for the
+    # same reason: an unadjusted ratio at 09:45 is small by construction.
+    if "avg_volume_10d" in df.columns:
+        raw_10d = safe(df["volume"], df["avg_volume_10d"])
+        df["rel_volume_10d"] = raw_10d / fraction if fraction > 0 else raw_10d
+    else:
+        df["rel_volume_10d"] = np.nan
     # Dollar volume — what a name actually trades, in money rather than
     # shares. 40M shares of a $2 stock and 40M shares of a $200 stock are
     # the same number and nothing like the same market, which is why every

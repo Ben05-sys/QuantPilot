@@ -269,6 +269,9 @@ def main():
             "symbol": ["X"], "name": ["X Corp"], "sector": ["Technology"],
             "price": [100.0], "change_pct": [1.0],
             "volume": [500_000.0], "avg_volume_3m": [1_000_000.0],
+            # Half its three-month average, but twice its last two weeks:
+            # the case the 3m ratio alone reads as a quiet day.
+            "avg_volume_10d": [250_000.0],
             "market_cap": [1e10], "week52_high": [150.0],
             "week52_low": [50.0], "sma50": [95.0], "sma200": [90.0],
             "earnings_ts": [np.nan], "market_state": [state]})
@@ -289,6 +292,32 @@ def main():
     check("a market holiday cannot inflate readings — the venue's state "
           "decides, not the wall clock",
           closed["session_fraction"].iloc[0] == 1.0)
+
+    # 500k against a 250k ten-day average is 2.0 — the same tape the
+    # three-month ratio calls 0.5. Both readings are true; they answer
+    # different questions, which is the point of carrying both.
+    check("the ten-day ratio is volume over the 10-day average",
+          abs(closed["rel_volume_10d"].iloc[0] - 2.0) < 1e-9,
+          closed["rel_volume_10d"].iloc[0])
+    check("and it disagrees with the three-month one, as it should",
+          closed["rel_volume"].iloc[0] < 1 < closed["rel_volume_10d"].iloc[0],
+          (closed["rel_volume"].iloc[0], closed["rel_volume_10d"].iloc[0]))
+    check("during the session it is scaled by the elapsed fraction too",
+          adjusted["rel_volume_10d"].iloc[0] >= 2.0,
+          adjusted["rel_volume_10d"].iloc[0])
+    check("relvol10 resolves", screen.resolve("relvol10") == "rel_volume_10d")
+    check("today's volume only rises, so it is never prefiltered on a "
+          "stale snapshot",
+          "rel_volume_10d" in screen.LIVE_COLUMNS
+          and "rel_volume_10d" not in screen.STATIC_SAFE)
+    check("a snapshot taken before the 10-day column existed derives "
+          "rather than raising",
+          derive(pd.DataFrame({
+              "symbol": ["X"], "name": ["X"], "sector": ["T"], "price": [1.0],
+              "change_pct": [0.0], "volume": [1.0], "avg_volume_3m": [1.0],
+              "market_cap": [1.0], "week52_high": [1.0], "week52_low": [1.0],
+              "sma50": [1.0], "sma200": [1.0], "earnings_ts": [np.nan],
+          }))["rel_volume_10d"].isna().all())
 
     print("\nearnings timing")
     def when_for(hour, minute=0):

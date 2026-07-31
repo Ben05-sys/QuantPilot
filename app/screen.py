@@ -30,7 +30,7 @@ from . import store
 # ---- vocabulary ----
 
 # Real columns, from the snapshot table plus what universe.derive() adds.
-DERIVED = ["rel_volume", "rel_volume_raw", "session_fraction",
+DERIVED = ["rel_volume", "rel_volume_raw", "rel_volume_10d", "session_fraction",
            "pct_from_52w_high", "pct_from_52w_low",
            "pct_from_sma50", "pct_from_sma200", "earnings_days",
            "earnings_when", "peg", "mktcap", "chg", "is_adr",
@@ -58,6 +58,8 @@ LIVE_COLUMNS = {
     "dollar_volume", "avg_dollar_volume", "day_range_pct",
     # Built from today's open, which a stale snapshot may not have yet.
     "gap_pct",
+    # Built from today's volume, which only rises as the session runs.
+    "rel_volume_10d",
 }
 
 # Fields safe to narrow with *before* re-pricing. The distinction is not
@@ -90,6 +92,7 @@ ALIASES = {
     "last": "price", "close": "price", "chgpct": "change_pct",
     "vol": "volume", "avgvol": "avg_volume_3m", "avgvol10": "avg_volume_10d",
     "relvol": "rel_volume", "relativevolume": "rel_volume",
+    "relvol10": "rel_volume_10d", "rvol10": "rel_volume_10d",
     "shares": "shares_outstanding", "float": "shares_outstanding",
     "eps": "eps_ttm", "fpe": "forward_pe", "pricetobook": "pb",
     "div": "dividend_yield", "divyield": "dividend_yield",
