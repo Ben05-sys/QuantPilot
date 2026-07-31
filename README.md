@@ -115,6 +115,31 @@ a stock down 17% outranks a fresh opinion column, and roundups tagged with
 eight tickers are discounted. Every row carries the ticker it is about and
 that ticker's move.
 
+**Live TV** (`F10`) — the US finance networks, embedded from their own
+channels: Bloomberg Television, Yahoo Finance, Schwab Network, Benzinga,
+Fox Business, CNBC, Reuters. Who is actually on air is read from each
+channel rather than assumed, so the wall shows a green dot against the ones
+broadcasting and opens on the busiest — never a dead player. Alongside it,
+the tickers the current headlines are about, with their moves, each one a
+click from its chart.
+
+It reads the picture, not the sound. YouTube renders live captions inside
+its own player but exposes no retrievable track: a live watch page carries
+no caption list, and `timedtext` answers with zero bytes. Their own
+documentation puts a downloadable transcript 12–24 hours after the
+broadcast ends. So the terminal does not claim to know what is being
+*said* — it shows what is being *traded* next to the picture, which it can
+establish honestly from the snapshot it already holds. Company names in
+headlines resolve against the 7,000-symbol universe, so "Nvidia" becomes
+NVDA with a live price beside it, while "he was open to a deal" is
+correctly not Opendoor.
+
+The embed is the one thing in the terminal that talks to a third party. It
+uses `youtube-nocookie.com`, which sets no tracking cookie unless you press
+play, and the iframe is only built when you open the view and a channel is
+live — the served page reaches nobody on its own. `tests/test_server.py`
+enumerates every permitted external host so this cannot quietly widen.
+
 **Search** — a box in the header for tickers and companies, ranked so the
 US listing wins: Yahoo otherwise returns NVIDIA's Toronto CDR and
 Frankfurt line above US names. `/` focuses it, arrows pick, Enter opens.
@@ -155,7 +180,7 @@ you navigate away.
 
 **Command line** — `NVDA`, `screen <expr>`, `news <sym>`, `watch <sym>`,
 `save`/`load`/`del <name>`, `clear`, `refresh`, and
-`scrn`/`heat`/`map`/`chart`/`adr`/`saved` to switch view. `F1`–`F7` switch
+`scrn`/`heat`/`map`/`chart`/`adr`/`saved` to switch view. `F1`–`F10` switch
 views, `/` focuses the prompt, `↑`/`↓` walk history.
 
 **Keyboard** — `↑`/`↓` move the grid cursor, `PgUp`/`PgDn`, `Home`/`End`,
@@ -283,7 +308,8 @@ app/
   options.py          chain shaping and unusual-activity ranking (parked)
   watchlist.py        thin layer over the positions table
   tray.py             Win32 tray icon and Ctrl+Alt+M, pure ctypes
-  server.py           stdlib HTTP + SSE, 17 routes
+  livetv.py           which finance networks are on air, and who they name
+  server.py           stdlib HTTP + SSE, 23 routes
   web/index.html      the entire terminal, self-contained
   providers/          nasdaq · yahoo · cboe · sec, behind one Protocol
 tools/make_icon.py    generates the .ico with the stdlib alone

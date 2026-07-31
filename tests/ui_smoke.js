@@ -108,7 +108,10 @@ setTimeout(() => {
   check("every tab points at a real view",
         tabs.every(v => v === "help" || doc.getElementById("view-" + v)),
         tabs.join(","));
-  check("nine tabs in the rail", tabs.length === 9, String(tabs.length));
+  check("ten tabs in the rail", tabs.length === 10, String(tabs.length));
+  check("the live tv view is reachable and has a player and a rail",
+        !!doc.getElementById("view-tv") && !!doc.getElementById("tvPlayer")
+        && !!doc.getElementById("tvMentions"));
   check("futures strip exists", !!doc.getElementById("futures"));
   check("watch panel exists", !!doc.getElementById("watchPanel"));
 

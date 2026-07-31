@@ -11,6 +11,7 @@ failed when there is no network.
 
 import json
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -109,8 +110,26 @@ def main():
         html = r.read().decode("utf-8")
     check("index.html is served", r.status == 200 and "PILOT MARKETS" in html)
     check("the launch token is injected", f'window.PM_TOKEN="{token}"' in html)
-    check("the page is self-contained (no external fetches)",
-          "src=\"http" not in html and "href=\"http" not in html.split("</style>")[0])
+    # The page still loads nothing third-party *at rest*. The live TV view
+    # is the one exception and it is deliberate: an embedded broadcast is
+    # the whole feature. It is held to three conditions, all checked here,
+    # because "self-contained" quietly becoming "self-contained except for
+    # the bits nobody audited" is exactly how a local-only tool stops being
+    # one. The iframe is built by script on demand, so opening the terminal
+    # and never pressing F10 still reaches no third party.
+    markup = html.split("<script")[0]
+    check("no external resources in the markup itself",
+          'src="http' not in markup and 'href="http' not in markup)
+    external = set(re.findall(r'https?://([\w.-]+)', html))
+    allowed = {"www.youtube-nocookie.com", "www.gnu.org",
+               "github.com", "www.w3.org"}
+    check("the only external hosts are the embed, the licence and the source",
+          external <= allowed, sorted(external - allowed))
+    check("the embed is on the no-cookie host, which sets no cookie "
+          "until you press play",
+          "youtube-nocookie.com" in html and "//www.youtube.com/embed" not in html)
+    check("nothing reaches YouTube until the view is opened",
+          'src="https://www.youtube-nocookie.com' not in markup)
     status, body = get(base + "/api/status", "wrong-token")
     check("a bad token is rejected", status == 403, body)
     status, body = get(base + "/api/nope", token)

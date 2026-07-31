@@ -27,7 +27,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
-from . import (article, clock, diffs, news, screen, store, stream,
+from . import (article, clock, diffs, livetv, news, screen, store, stream,
                universe, watchlist)
 from .config import load_config
 from .providers import sec, yahoo
@@ -585,6 +585,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._article(params)
             elif path == "/api/market-news":
                 self._market_news(params)
+            elif path == "/api/livetv":
+                self._livetv(params)
             elif path == "/api/search":
                 self._search(params)
             elif path == "/api/related":
@@ -957,6 +959,41 @@ class Handler(BaseHTTPRequestHandler):
                for key, items in sorted(buckets.items())]
         self._json({"days": out, "total": total, "window": days,
                     "as_of": time.time()})
+
+    def _livetv(self, params: dict):
+        """Which finance networks are on air, and the tickers the current
+        headlines are about.
+
+        Six channel probes is six round trips, so it is cached hard and
+        every open window shares one build — a stream that has been running
+        since Tokyo does not need re-checking per keystroke.
+
+        The mentions are drawn from the news feed rather than from the
+        broadcast audio. YouTube renders live captions inside its own player
+        but exposes no retrievable track, so claiming to know what is being
+        *said* would be a guess dressed as a fact. What is in the headlines
+        while a network is on air is a real answer to a near-enough
+        question, and the response labels it as exactly that.
+        """
+        cached = self.state.strip_cache("livetv")
+        if cached is not None and self._one(params, "force") != "1":
+            self._json(cached)
+            return
+        payload = livetv.channels()
+        frame = self._frame()
+        seen, rail = set(), []
+        for item in (news.feed(frame, limit=25).get("items") or []):
+            for hit in livetv.mentioned(item.get("title") or "", frame):
+                if hit["symbol"] in seen:
+                    continue
+                seen.add(hit["symbol"])
+                rail.append({**hit, "headline": item.get("title"),
+                             "source": item.get("source")})
+        rail.sort(key=lambda r: -abs(r.get("change_pct") or 0))
+        payload["mentions"] = rail[:20]
+        payload["mentions_from"] = "headlines"
+        self.state.store_strip("livetv", payload)
+        self._json(payload)
 
     def _market_news(self, params: dict):
         """The market feed. Built from a broad wire plus news on whatever

@@ -324,6 +324,45 @@ button.act:hover{background:var(--amber);color:#000}
   box-shadow:0 3px 14px #000;white-space:nowrap}
 #mapBar button.act.on{background:var(--amber);color:#000}
 
+/* ---- live tv ----
+   The player and the rail sit side by side because the point of the view
+   is the pairing: the picture on the left, and what the tape says about
+   what it is talking about on the right. */
+#tvWrap{flex:1;display:flex;min-height:0;background:var(--panel)}
+#tvMain{flex:1;display:flex;flex-direction:column;min-width:0}
+#tvChannels{display:flex;gap:0;flex:0 0 auto;overflow-x:auto;
+  border-bottom:1px solid var(--line);background:#050505}
+.tvch{padding:3px 11px;border-right:1px solid var(--line);cursor:pointer;
+  white-space:nowrap;color:var(--muted)}
+.tvch:hover{background:#1c1405;color:var(--amber-hi)}
+.tvch.on{background:var(--amber);color:#000}
+.tvch.off{color:#4a4034;cursor:default}
+.tvch.off:hover{background:none;color:#4a4034}
+/* A dot rather than the word LIVE: the wall is scanned, not read. */
+.tvch .dot{display:inline-block;width:5px;height:5px;border-radius:50%;
+  margin-right:6px;background:#3a3128;vertical-align:middle}
+.tvch.islive .dot{background:#4ad06a;box-shadow:0 0 5px #4ad06a}
+.tvch .who{font-size:10px;color:inherit;opacity:.65;margin-left:7px}
+#tvPlayer{flex:1;position:relative;min-height:0;background:#000;
+  display:flex;align-items:center;justify-content:center}
+#tvPlayer iframe{width:100%;height:100%;border:0;display:block}
+#tvEmpty{padding:20px;text-align:center}
+#tvRail{flex:0 0 290px;display:flex;flex-direction:column;min-height:0;
+  border-left:1px solid var(--line);background:#050505}
+#tvRailHead{padding:3px 9px;border-bottom:1px solid var(--line);
+  color:var(--amber);letter-spacing:.1em;flex:0 0 auto;
+  display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+#tvRailHead .dim{font-size:10px;letter-spacing:0}
+#tvMentions{flex:1;overflow-y:auto}
+.tvm{padding:4px 9px;border-bottom:1px solid #100c04;cursor:pointer}
+.tvm:hover{background:#1c1405}
+.tvm .top{display:flex;justify-content:space-between;gap:8px;
+  align-items:baseline}
+.tvm .sym{color:var(--amber-hi)}
+.tvm .hl{color:var(--muted);font-size:10px;display:block;margin-top:2px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:1100px){ #tvRail{flex-basis:210px} }
+
 /* ---- world map ---- */
 #worldWrap{flex:1;position:relative;min-height:0}
 #world{display:block;width:100%;height:100%}
@@ -475,6 +514,7 @@ h3.hd{color:var(--amber);letter-spacing:.12em;margin:12px 0 4px}
     <div class="tab" data-view="adr"><b>F7</b>ADR</div>
     <div class="tab" data-view="earnings"><b>F8</b>EARN</div>
     <div class="tab" data-view="news"><b>F9</b>NEWS</div>
+    <div class="tab" data-view="tv"><b>F10</b>TV</div>
     <div class="tab" data-view="help"><b>F1</b>HELP</div>
   </div>
 
@@ -631,6 +671,29 @@ h3.hd{color:var(--amber);letter-spacing:.12em;margin:12px 0 4px}
       <div id="mktNews"></div>
     </div>
 
+    <!-- live tv -->
+    <div class="view" id="view-tv">
+      <div id="mapBar">
+        <span class="vtitle">LIVE TV</span>
+        <span class="dim">US finance networks, embedded from their own
+          channels</span>
+        <button class="act" id="tvRefresh">REFRESH</button>
+        <span id="tvNote" class="vstatus"></span>
+      </div>
+      <div id="tvWrap">
+        <div id="tvMain">
+          <div id="tvChannels"></div>
+          <div id="tvPlayer"><div id="tvEmpty" class="dim">checking who is
+            on air…</div></div>
+        </div>
+        <div id="tvRail">
+          <div id="tvRailHead">IN THE HEADLINES
+            <span class="dim" id="tvRailNote"></span></div>
+          <div id="tvMentions"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- saved -->
     <div class="view" id="view-saved"><div id="saved"></div></div>
   </div>
@@ -641,7 +704,7 @@ h3.hd{color:var(--amber);letter-spacing:.12em;margin:12px 0 4px}
   <input id="cmdIn" autocomplete="off" spellcheck="false"
          placeholder="ticker, or  screen mcap>10b and chg>3 and relvol>2   —  type help">
   <span id="msg"></span>
-  <span id="keys">F1 HELP · F2 SCRN · F3 HEAT · F4 CHRT · F5 SAVE · F6 WRLD · F7 ADR · F8 EARN · F9 NEWS</span>
+  <span id="keys">F1 HELP · F2 SCRN · F3 HEAT · F4 CHRT · F5 SAVE · F6 WRLD · F7 ADR · F8 EARN · F9 NEWS · F10 TV</span>
 </div>
 
 <div id="prog"><div id="progBar"></div></div>
@@ -1956,6 +2019,88 @@ document.getElementById("tkTabs").addEventListener("click", e=>{
    Yahoo's wire carries no tickers, and the search endpoint takes one
    symbol at a time — so the feed asks about whatever is moving hardest,
    which the snapshot already knows for free, and merges the two. */
+/* ---------- live tv ---------- */
+S.tv = {channels:[], mentions:[], current:null, loaded:false};
+
+async function loadLiveTv(force){
+  const note = document.getElementById("tvNote");
+  note.textContent = "checking who is on air…";
+  try{
+    const d = await api("/api/livetv" + (force?"?force=1":""));
+    S.tv.channels = d.channels||[];
+    S.tv.mentions = d.mentions||[];
+    S.tv.loaded = true;
+    // Keep the channel you chose if it is still broadcasting; only fall
+    // back to the default when it has gone off air under you.
+    const still = S.tv.channels.find(c=>c.id===S.tv.current && c.live);
+    if(!still) S.tv.current = d.default;
+    note.textContent = d.live_count
+      ? `${d.live_count} live of ${S.tv.channels.length}`
+      : "nothing live right now";
+    drawLiveTv();
+  }catch(e){ note.textContent = "unavailable"; say(e.message, true); }
+}
+
+function drawLiveTv(){
+  const bar = document.getElementById("tvChannels");
+  bar.innerHTML = S.tv.channels.map(c=>{
+    const on = c.id===S.tv.current;
+    const who = c.live && c.viewers
+      ? `<span class="who">${Intl.NumberFormat().format(c.viewers)}</span>` : "";
+    return `<div class="tvch${c.live?" islive":" off"}${on?" on":""}"`
+      + ` data-ch="${esc(c.id)}" title="${esc(c.note||"")}">`
+      + `<span class="dot"></span>${esc(c.name)}${who}</div>`;
+  }).join("") || `<span class="dim" style="padding:3px 10px">no channels</span>`;
+
+  const ch = S.tv.channels.find(c=>c.id===S.tv.current);
+  const player = document.getElementById("tvPlayer");
+  if(ch && ch.live && ch.video_id){
+    // Only rebuild the iframe when the channel actually changes — resetting
+    // src on every redraw would restart the stream under the viewer.
+    if(player.dataset.vid !== ch.video_id){
+      player.dataset.vid = ch.video_id;
+      // youtube-nocookie, not youtube: the privacy-preserving embed host
+      // sets no tracking cookie unless you actually press play. Same
+      // player, same stream. The iframe is built here rather than living
+      // in the markup so that nothing reaches YouTube until you open this
+      // view and a channel is actually on air.
+      player.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/`
+        + `${encodeURIComponent(ch.video_id)}?rel=0&modestbranding=1&playsinline=1"`
+        + ` allow="accelerometer; encrypted-media; picture-in-picture"`
+        + ` allowfullscreen referrerpolicy="strict-origin-when-cross-origin"`
+        + ` title="${esc(ch.name)}"></iframe>`;
+    }
+  }else{
+    player.dataset.vid = "";
+    player.innerHTML = `<div id="tvEmpty" class="dim">`
+      + (S.tv.loaded ? "no network is broadcasting right now — the US"
+         + " session is closed" : "checking who is on air…") + `</div>`;
+  }
+
+  document.getElementById("tvRailNote").textContent =
+    S.tv.mentions.length ? "from headlines" : "";
+  const rail = document.getElementById("tvMentions");
+  rail.innerHTML = S.tv.mentions.map(m=>
+    `<div class="tvm" data-s="${esc(m.symbol)}">`
+    + `<div class="top"><span class="sym">${esc(m.symbol)}</span>`
+    + `<span class="${cls(m.change_pct)}">${fpct(m.change_pct)}</span></div>`
+    + `<span class="hl">${esc(m.headline||m.name||"")}</span></div>`
+  ).join("") || `<div class="dim" style="padding:8px 9px">nothing tagged yet`
+    + `</div>`;
+}
+
+document.getElementById("tvChannels").onclick = e=>{
+  const el = e.target.closest(".tvch");
+  if(!el || el.classList.contains("off")) return;
+  S.tv.current = el.dataset.ch;
+  drawLiveTv(); saveUi();
+};
+document.getElementById("tvMentions").onclick = e=>{
+  const el = e.target.closest(".tvm");
+  if(el) openTicker(el.dataset.s);
+};
+document.getElementById("tvRefresh").onclick = ()=>loadLiveTv(true);
+
 S.mkt = {items:[], movers:[]};
 
 async function loadMarketNews(force){
@@ -2843,6 +2988,7 @@ function setView(v){
     if(v==="adr" && !S.adr.rows.length) loadAdr();
     if(v==="earnings" && !S.earn.days.length) loadEarnings();
     if(v==="news" && !S.mkt.items.length) loadMarketNews();
+    if(v==="tv" && !S.tv.loaded) loadLiveTv();
     if(v==="saved") loadSaved();
     if(v==="screen") drawRows(true);
   });
@@ -3075,7 +3221,7 @@ document.addEventListener("keydown", e=>{
     document.getElementById("help").style.display="none"; return;
   }
   const keys = {F1:"help", F2:"screen", F3:"map", F4:"ticker", F5:"saved",
-                F6:"world", F7:"adr", F8:"earnings", F9:"news"};
+                F6:"world", F7:"adr", F8:"earnings", F9:"news", F10:"tv"};
   if(keys[e.key]){ e.preventDefault(); setView(keys[e.key]); return; }
   const tag = (e.target.tagName||"").toUpperCase();
   if(tag==="INPUT"||tag==="SELECT"||tag==="TEXTAREA") return;
