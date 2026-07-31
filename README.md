@@ -1,5 +1,7 @@
 # QuantPilot
 
+[![tests](https://github.com/Ben05-sys/QuantPilot/actions/workflows/ci.yml/badge.svg)](https://github.com/Ben05-sys/QuantPilot/actions/workflows/ci.yml)
+
 A local market terminal: Finviz-class screening over the whole US universe,
 Bloomberg-style chrome, no API keys, no vendor, no monthly bill.
 
@@ -16,6 +18,12 @@ to grow a column for it.
 ## Install
 
 Needs **Python 3.11 or newer**. Nothing else, and no account anywhere.
+
+Runs on **Linux, macOS and Windows** — the test suites run against all three
+on every push. The terminal is a stdlib HTTP server and one HTML file, so
+the browser does the work everywhere. Three conveniences are Windows-only
+and each degrades to a printed line rather than an error: the tray icon, the
+`Ctrl+Alt+M` hotkey, and `--install-shortcut`.
 
 ```bash
 pip install -r requirements.txt
@@ -50,7 +58,7 @@ python pilot.py --port 9000 --no-browser
 First run builds the snapshot in the background and shows progress in the
 window. A full rebuild is **about 7,000 symbols in 20–35 seconds**.
 
-Once it's running it sits in the system tray. **Ctrl+Alt+M** summons it
+On Windows it sits in the system tray. **Ctrl+Alt+M** summons it
 from anywhere; right-click the tray icon for Open / Refresh / Quit.
 
 ---
@@ -357,7 +365,9 @@ Two house rules, both load-bearing:
 
 Good first issues: un-parking the options view (`app/options.py` and
 `providers/cboe.py` are written and tested, they just need a route and a
-view), indicators inside the expression engine, and a macOS build.
+view), indicators inside the expression engine, and a tray icon for macOS
+or Linux — the terminal itself already runs on both, so what is missing is
+the convenience layer `app/tray.py` provides on Windows, not a port.
 
 ## Licence
 
