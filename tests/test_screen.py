@@ -330,6 +330,10 @@ def main():
         # FLAT never moved, NOTRADE sits a third of the way up.
         "day_low": [1.9, 190.0, 50.0, 9.0],
         "day_high": [2.5, 200.0, 50.0, 12.0],
+        # CHEAP gapped up 5%, DEAR gapped down 3%, FLAT and NOTRADE opened
+        # unchanged from yesterday's close.
+        "open": [2.1, 194.0, 50.0, 10.0],
+        "prev_close": [2.0, 200.0, 50.0, 10.0],
         "week52_high": [3.0, 250.0, 60.0, 15.0],
         "week52_low": [1.0, 100.0, 40.0, 8.0],
         "sma50": [2.0, 200.0, 50.0, 10.0],
@@ -372,6 +376,26 @@ def main():
               "market_cap": [1.0], "week52_high": [1.0], "week52_low": [1.0],
               "sma50": [1.0], "sma200": [1.0], "earnings_ts": [np.nan],
           }))["day_range_pct"].isna().all())
+
+    print("\ngap percent")
+    check("gapped up 5%", abs(row["CHEAP"]["gap_pct"] - 5.0) < 1e-9,
+          row["CHEAP"]["gap_pct"])
+    check("gapped down 3%", abs(row["DEAR"]["gap_pct"] - (-3.0)) < 1e-9,
+          row["DEAR"]["gap_pct"])
+    check("opened flat is a real zero, not null",
+          row["FLAT"]["gap_pct"] == 0.0, row["FLAT"]["gap_pct"])
+    check("gap resolves", screen.resolve("gap") == "gap_pct")
+    check("gap screens", syms(dv[screen.mask(dv, "gap > 3")]) == ["CHEAP"],
+          syms(dv[screen.mask(dv, "gap > 3")]))
+    check("gap needs a live open, so it isn't prefiltered on a stale one",
+          "gap_pct" in screen.LIVE_COLUMNS and "gap_pct" not in screen.STATIC_SAFE)
+    check("a frame with no open/prev_close derives rather than raising",
+          derive(pd.DataFrame({
+              "symbol": ["X"], "name": ["X"], "sector": ["T"], "price": [1.0],
+              "change_pct": [0.0], "volume": [1.0], "avg_volume_3m": [1.0],
+              "market_cap": [1.0], "week52_high": [1.0], "week52_low": [1.0],
+              "sma50": [1.0], "sma200": [1.0], "earnings_ts": [np.nan],
+          }))["gap_pct"].isna().all())
 
     # Today's dollar volume only rises, so prefiltering on a stale one would
     # drop the names that have since crossed the line. The average is a

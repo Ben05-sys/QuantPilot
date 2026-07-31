@@ -35,7 +35,7 @@ DERIVED = ["rel_volume", "rel_volume_raw", "session_fraction",
            "pct_from_sma50", "pct_from_sma200", "earnings_days",
            "earnings_when", "peg", "mktcap", "chg", "is_adr",
            "rs_sector", "sector_change_pct",
-           "dollar_volume", "avg_dollar_volume", "day_range_pct"]
+           "dollar_volume", "avg_dollar_volume", "day_range_pct", "gap_pct"]
 COLUMNS = [n for n, _ in store.UNIVERSE_COLUMNS] + DERIVED
 
 TEXT_COLUMNS = {"symbol", "name", "sector", "industry", "country",
@@ -56,6 +56,8 @@ LIVE_COLUMNS = {
     # Dollar volume moves with both of its factors; the day-range position
     # moves with all three of its.
     "dollar_volume", "avg_dollar_volume", "day_range_pct",
+    # Built from today's open, which a stale snapshot may not have yet.
+    "gap_pct",
 }
 
 # Fields safe to narrow with *before* re-pricing. The distinction is not
@@ -114,7 +116,7 @@ ALIASES = {
     "avgdvol": "avg_dollar_volume", "avgdollarvol": "avg_dollar_volume",
     "liquidity": "avg_dollar_volume",
     "dayrange": "day_range_pct", "rangepos": "day_range_pct",
-    "inrange": "day_range_pct",
+    "inrange": "day_range_pct", "gap": "gap_pct",
     "when": "earnings_when", "earningswhen": "earnings_when",
     "rs": "rs_sector", "vssector": "rs_sector",
     "sectorchg": "sector_change_pct",

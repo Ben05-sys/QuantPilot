@@ -257,6 +257,14 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
                                    df["day_high"] - df["day_low"]) * 100
     else:
         df["day_range_pct"] = np.nan
+    # The move that happened before the session opened — distinct from
+    # anything that has traded since, and the first thing a gap-and-go
+    # screen needs. Null rather than 0 when either side is missing, same
+    # as every other ratio here.
+    if "open" in df.columns and "prev_close" in df.columns:
+        df["gap_pct"] = safe(df["open"] - df["prev_close"], df["prev_close"]) * 100
+    else:
+        df["gap_pct"] = np.nan
     df["pct_from_52w_high"] = safe(df["price"] - df["week52_high"], df["week52_high"]) * 100
     df["pct_from_52w_low"] = safe(df["price"] - df["week52_low"], df["week52_low"]) * 100
     df["pct_from_sma50"] = safe(df["price"] - df["sma50"], df["sma50"]) * 100
