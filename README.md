@@ -367,9 +367,12 @@ against loopback and private ranges.
 
 ## Contributing
 
-Issues and pull requests are welcome. The codebase is small enough to read
-in an afternoon — `## Layout` above is the map, and every module opens with
-a docstring explaining why it exists rather than what it does.
+Issues and pull requests are welcome — see **[CONTRIBUTING.md](CONTRIBUTING.md)**
+for the full version, and the
+[good first issues](https://github.com/Ben05-sys/QuantPilot/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
+for somewhere to start. The codebase is small enough to read in an
+afternoon — `## Layout` above is the map, and every module opens with a
+docstring explaining why it exists rather than what it does.
 
 Tests are plain scripts, no pytest:
 
