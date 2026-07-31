@@ -2022,6 +2022,11 @@ document.getElementById("tkTabs").addEventListener("click", e=>{
 /* ---------- live tv ---------- */
 S.tv = {channels:[], mentions:[], current:null, loaded:false};
 
+const fwatch = n =>
+  n >= 1e6 ? (n/1e6).toFixed(1).replace(/\.0$/,"") + "M"
+: n >= 1e3 ? Math.round(n/1e3) + "K"
+: String(n);
+
 async function loadLiveTv(force){
   const note = document.getElementById("tvNote");
   note.textContent = "checking who is on air…";
@@ -2045,8 +2050,13 @@ function drawLiveTv(){
   const bar = document.getElementById("tvChannels");
   bar.innerHTML = S.tv.channels.map(c=>{
     const on = c.id===S.tv.current;
+    // Compact rather than exact: the rail is scanned, and "7.5M" carries
+    // the whole meaning of 7,471,034 in a third of the width. It also
+    // sidesteps digit grouping, which toLocaleString renders by system
+    // locale — 74,71,034 on an Indian machine, which is correct there and
+    // wrong beside a column of US market data.
     const who = c.live && c.viewers
-      ? `<span class="who">${Intl.NumberFormat().format(c.viewers)}</span>` : "";
+      ? `<span class="who">${fwatch(c.viewers)}</span>` : "";
     return `<div class="tvch${c.live?" islive":" off"}${on?" on":""}"`
       + ` data-ch="${esc(c.id)}" title="${esc(c.note||"")}">`
       + `<span class="dot"></span>${esc(c.name)}${who}</div>`;
