@@ -22,8 +22,9 @@ import json
 import sqlite3
 import threading
 import time
+from collections.abc import Callable
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 
 import requests
 
@@ -83,8 +84,16 @@ def _host(url: str) -> str:
     return (urlsplit(url).hostname or "").lower()
 
 
+def _is_sec(host: str) -> bool:
+    # Exactly sec.gov or a subdomain of it. `endswith("sec.gov")` also
+    # matches `notsec.gov`, and the SEC agent carries the user's own contact
+    # address — a string this project goes out of its way not to hand to
+    # anyone who did not ask for it.
+    return host == "sec.gov" or host.endswith(".sec.gov")
+
+
 def _ua_for(url: str) -> str:
-    return sec_ua() if _host(url).endswith("sec.gov") else BROWSER_UA
+    return sec_ua() if _is_sec(_host(url)) else BROWSER_UA
 
 
 class Cache:
@@ -205,33 +214,73 @@ class ContactRequired(FetchError):
 DEFAULT_TTL = 24 * 3600
 
 
+MAX_REDIRECTS = 5
+
+
 def fetch(url: str, *, ttl: float = DEFAULT_TTL, retries: int = 3,
-          headers: dict | None = None, timeout: float = 30.0) -> bytes:
-    """GET a URL, honouring the cache and the per-host rate limit."""
-    cached = cache().get(url, ttl)
+          headers: dict | None = None, timeout: float = 30.0,
+          redirect_guard: Callable[[str], bool] | None = None) -> bytes:
+    """GET a URL, honouring the cache and the per-host rate limit.
+
+    `redirect_guard` makes the hops visible. Left as None, requests follows
+    redirects itself, which is right for the providers: their hosts are ours
+    to begin with. The article reader passes its own check, because there
+    the starting URL came from a third-party feed — and a host check that
+    only inspects the address you *started* with is not a check at all if
+    the server on the other end is allowed to send you somewhere else.
+    """
+    requested = url
+    cached = cache().get(requested, ttl)
     if cached is not None:
         return cached
 
-    limiter = _LIMITERS.get(_host(url), _DEFAULT_LIMITER)
-    hdrs = {"User-Agent": _ua_for(url)}
-    if headers:
-        hdrs.update(headers)
+    hdrs = dict(headers or {})
     sess = session()
-
     last_error: Exception | None = None
-    for attempt in range(retries):
-        limiter.wait()
-        try:
-            resp = sess.get(url, headers=hdrs, timeout=timeout,
-                            allow_redirects=True)
-        except requests.RequestException as exc:  # transport; worth retrying
-            last_error = exc
-            time.sleep(1.5 * (attempt + 1))
+
+    # Redirects are the outer loop and retries the inner one: a hop is not a
+    # failed attempt, and following three of them must not eat the retries a
+    # flaky host is going to need.
+    for _hop in range(MAX_REDIRECTS + 1):
+        limiter = _LIMITERS.get(_host(url), _DEFAULT_LIMITER)
+        # A caller-supplied agent wins and stays put across hops; otherwise
+        # it is chosen per host, so a hop onto sec.gov still identifies us.
+        hdrs["User-Agent"] = (headers or {}).get("User-Agent") or _ua_for(url)
+        resp = None
+
+        for attempt in range(retries):
+            limiter.wait()
+            try:
+                resp = sess.get(url, headers=hdrs, timeout=timeout,
+                                allow_redirects=redirect_guard is None)
+            except requests.RequestException as exc:  # transport; retry
+                last_error, resp = exc, None
+                time.sleep(1.5 * (attempt + 1))
+                continue
+
+            if resp.status_code in (429, 503) or resp.status_code >= 500:
+                time.sleep(2.0 * (attempt + 1))
+                last_error, resp = FetchError(
+                    url, resp.status_code, resp.text), None
+                continue
+            break
+
+        if resp is None:
+            break
+
+        if redirect_guard is not None and resp.is_redirect:
+            target = urljoin(url, resp.headers.get("location", ""))
+            if not redirect_guard(target):
+                raise FetchError(target, resp.status_code,
+                                 "redirected somewhere we will not follow")
+            url = target
             continue
 
         if resp.status_code == 200:
             if ttl > 0:
-                cache().put(url, resp.content)
+                # Keyed on what the caller asked for, so a redirect chain is
+                # not walked again on every read.
+                cache().put(requested, resp.content)
             return resp.content
 
         # 404 is a real answer for a lot of these APIs ("this company never
@@ -239,12 +288,9 @@ def fetch(url: str, *, ttl: float = DEFAULT_TTL, retries: int = 3,
         if resp.status_code == 404:
             raise FetchError(url, 404)
 
-        if resp.status_code in (429, 503) or resp.status_code >= 500:
-            time.sleep(2.0 * (attempt + 1))
-            last_error = FetchError(url, resp.status_code, resp.text)
-            continue
-
         raise FetchError(url, resp.status_code, resp.text)
+    else:
+        raise FetchError(url, 0, "too many redirects")
 
     if isinstance(last_error, FetchError):
         raise last_error

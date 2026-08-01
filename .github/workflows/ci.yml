@@ -74,6 +74,10 @@ jobs:
       # changing under the test.
       - name: live news
         run: python tests/test_livenews.py
+      # The address check on the article reader. Uses IP literals and one
+      # .invalid name, so it asserts the same thing on a runner with no DNS.
+      - name: article
+        run: python tests/test_article.py
 
       # These two exercise the HTTP server and the tick decoder. They pass
       # offline locally; the matrix is what tells us whether that holds on a

@@ -10,7 +10,25 @@ saved screen will be called out here under **Changed** rather than buried.
 
 ## [Unreleased]
 
-Nothing yet.
+### Security
+
+- **The article reader now re-checks the address on every redirect hop.** It
+  validated the URL it was given and then let the HTTP layer follow redirects
+  unexamined, so a publisher in the news feed — or anyone who could get a link
+  into it — could answer with `302 http://127.0.0.1:8900/…` and have the
+  terminal fetch it. Reported by CodeQL as a partial SSRF; the guard now runs
+  on each hop and the chain is cut at five.
+- **The blocked-address check understands addresses rather than text.** It was
+  a regex over the hostname, which meant `127.0.0.1` was blocked while
+  `2130706433`, `0177.0.0.1`, `127.1` and `[::ffff:127.0.0.1]` — the same
+  machine, differently spelled — were not, and `0.0.0.0`, IPv6 link-local and
+  unique-local, and the 100.64/10 carrier range were never listed at all.
+  Names are resolved and every address they stand for is checked; a name that
+  does not resolve now fails closed.
+- **The SEC contact address can no longer be sent anywhere but the SEC.** The
+  agent carrying it was selected with `host.endswith("sec.gov")`, which also
+  matches `notsec.gov`.
+- `tests/test_article.py` covers all of the above, and runs in CI.
 
 ## [0.1.0] — 2026-08-01
 

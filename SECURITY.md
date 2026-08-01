@@ -35,8 +35,12 @@ bug rather than a rendering one, and each is deliberately constrained:
 - **The article reader** takes a story id, never a URL. A route that fetched
   whatever address it was handed would be an open proxy running on your
   machine, usable to probe your own network. Only stories the server has
-  already served as news can be fetched, and the resolved host is still
-  checked against loopback and private ranges.
+  already served as news can be fetched; the host is resolved and every
+  address it stands for is checked against loopback, private, link-local and
+  carrier ranges; and the check runs again on **every redirect hop**, because
+  the publisher on the other end is allowed to answer "fetch this instead".
+  `tests/test_article.py` holds the whole table, in the spellings that
+  matter — `2130706433` and `[::ffff:127.0.0.1]` are also loopback.
 - **Third-party reach** is one embed: the YouTube player in the live news
   view, built by script only when you open that view and a channel is on air.
   `tests/test_server.py` enumerates every permitted external host, so the set

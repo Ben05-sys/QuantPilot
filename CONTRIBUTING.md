@@ -27,7 +27,7 @@ Plain scripts with asserts, no pytest. Run them from the repo root:
 ```bash
 python tests/test_screen.py    python tests/test_store.py     python tests/test_clock.py
 python tests/test_diffs.py     python tests/test_options.py   python tests/test_stream.py
-python tests/test_server.py    python tests/test_livenews.py
+python tests/test_server.py    python tests/test_livenews.py  python tests/test_article.py
 
 cd tests && npm install jsdom && cd ..
 node tests/ui_smoke.js

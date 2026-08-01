@@ -345,6 +345,7 @@ python tests/test_stream.py    # subscriptions, overlay, backoff
 python tests/test_options.py   # chain shaping, unusual activity
 python tests/test_clock.py     # session transitions, replayed in milliseconds
 python tests/test_server.py    # every route, on an ephemeral port
+python tests/test_article.py   # the reader's address check, every hop of it
 node   tests/ui_smoke.js       # boots the page in jsdom
 ```
 

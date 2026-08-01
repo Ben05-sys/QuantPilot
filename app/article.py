@@ -18,7 +18,8 @@ article.
 
 from __future__ import annotations
 
-import re
+import ipaddress
+import socket
 import threading
 import time
 from urllib.parse import urlsplit
@@ -32,12 +33,41 @@ _LOCK = threading.Lock()
 _TTL = 6 * 3600
 _MAX = 4000
 
-# Publishers seen in Yahoo's feed. A registered id still has to resolve to
-# a plausible news host — belt and braces, so a poisoned feed entry cannot
-# point the fetcher at something local.
-_BLOCKED_HOSTS = re.compile(
-    r"^(localhost$|127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|\[?::1\]?$)",
-    re.I)
+# A registered id still has to resolve to an address off this machine and
+# off this network — belt and braces, so a poisoned feed entry cannot point
+# the fetcher at something local.
+#
+# This was a regex over the text of the host, which is the wrong shape for
+# the job: `127.0.0.1` is only one spelling of loopback. `2130706433` is the
+# same address as an integer, `[::1]` and `[::ffff:127.0.0.1]` are the same
+# address in IPv6, and none of `0.0.0.0`, `fe80::`, `fc00::` or the
+# 100.64/10 carrier range were listed at all. Asking the `ipaddress` module
+# instead covers every spelling of every one of them, including the
+# 169.254.169.254 metadata address that makes SSRF worth doing.
+_MAX_REDIRECTS = 5
+
+
+def _addresses(host: str) -> list:
+    """Every IP `host` stands for — itself if it is a literal, otherwise
+    whatever DNS says. An empty list means the name did not resolve, and the
+    fetch is left to fail on its own terms rather than being called unsafe.
+    """
+    try:
+        return [ipaddress.ip_address(host.strip("[]"))]
+    except ValueError:
+        pass
+    # The spellings `ipaddress` rejects and the network stack still accepts:
+    # `2130706433`, `0177.0.0.1`, `127.1` are all loopback to inet_aton, and
+    # a check that only understands dotted quads would wave them through.
+    try:
+        return [ipaddress.IPv4Address(socket.inet_aton(host))]
+    except OSError:
+        pass
+    try:
+        infos = socket.getaddrinfo(host, None, proto=socket.IPPROTO_TCP)
+    except OSError:
+        return []
+    return [ipaddress.ip_address(info[4][0]) for info in infos]
 
 CHROME_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
              "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
@@ -73,7 +103,13 @@ def _safe(url: str) -> bool:
     if parts.scheme not in ("http", "https"):
         return False
     host = (parts.hostname or "").lower()
-    return bool(host) and not _BLOCKED_HOSTS.match(host)
+    if not host or host == "localhost" or host.endswith(".localhost"):
+        return False
+    # Fails closed: a name nobody can resolve is not a name we will fetch.
+    # The article would not have loaded anyway, and the original is always
+    # one click away in the reader.
+    addresses = _addresses(host)
+    return bool(addresses) and all(addr.is_global for addr in addresses)
 
 
 def fetch(story_id: str, ttl: float = 1800) -> dict:
@@ -85,8 +121,12 @@ def fetch(story_id: str, ttl: float = 1800) -> dict:
         raise ArticleError("refusing to fetch that address")
 
     try:
+        # The same check on every hop. Validating only the address you
+        # started with is not a check at all when the server on the other
+        # end is allowed to answer "now go and fetch 127.0.0.1 instead".
         raw = net.fetch(url, ttl=ttl, retries=2, timeout=30,
-                        headers={"User-Agent": CHROME_UA})
+                        headers={"User-Agent": CHROME_UA},
+                        redirect_guard=_safe)
     except net.FetchError as exc:
         raise ArticleError(f"could not load the article ({exc.status})") from exc
 
