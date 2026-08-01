@@ -1,10 +1,18 @@
 # QuantPilot
 
 [![tests](https://github.com/Ben05-sys/QuantPilot/actions/workflows/ci.yml/badge.svg)](https://github.com/Ben05-sys/QuantPilot/actions/workflows/ci.yml)
+[![codeql](https://github.com/Ben05-sys/QuantPilot/actions/workflows/codeql.yml/badge.svg)](https://github.com/Ben05-sys/QuantPilot/actions/workflows/codeql.yml)
+[![python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/downloads/)
+[![platforms](https://img.shields.io/badge/platforms-Linux%20%C2%B7%20macOS%20%C2%B7%20Windows-lightgrey)](#install)
+[![licence](https://img.shields.io/badge/licence-AGPL--3.0-green)](LICENSE)
 
 A local market terminal: Finviz-class screening over the whole US universe,
 the finance networks live beside the tape, Bloomberg-style chrome, no API
 keys, no vendor, no monthly bill.
+
+```bash
+pip install -r requirements.txt && python pilot.py
+```
 
 ![The screener](docs/screener.png)
 
@@ -368,6 +376,9 @@ per-launch token that is injected into the served page and echoed on every
 API call. The SSE stream accepts the same token as a query parameter, because
 `EventSource` cannot set request headers.
 
+Found something? Please report it privately — **[SECURITY.md](SECURITY.md)**
+has the threat model and the advisory link, and says what is in scope.
+
 The article reader takes a **story id, never a URL**. A route that fetched
 whatever address it was handed would be an open proxy running on your
 machine — usable to probe your own network. Only stories the server has
@@ -383,11 +394,16 @@ for somewhere to start. The codebase is small enough to read in an
 afternoon — `## Layout` above is the map, and every module opens with a
 docstring explaining why it exists rather than what it does.
 
+By taking part you agree to the
+[Code of Conduct](CODE_OF_CONDUCT.md); released versions are listed in the
+[changelog](CHANGELOG.md).
+
 Tests are plain scripts, no pytest:
 
 ```bash
 python tests/test_screen.py     # and test_server, test_store, test_stream, ...
 node  tests/ui_smoke.js         # boots the whole UI in jsdom; needs `npm i jsdom`
+pip install -r requirements-dev.txt && ruff check .   # what CI lints with
 ```
 
 Run them before opening a PR. `ui_smoke.js` is the one that catches a

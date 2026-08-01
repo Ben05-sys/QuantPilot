@@ -47,6 +47,20 @@ understood well enough to merge yet. Never weaken an existing assertion to get
 a green run; if an assertion is genuinely wrong, say so in the PR and change it
 deliberately.
 
+## Style
+
+```bash
+pip install -r requirements-dev.txt
+ruff check .
+```
+
+That is exactly what CI runs, and the configuration lives in `ruff.toml` so it
+cannot drift from what you see locally. There is deliberately **no formatter**:
+the source is hand-wrapped so comments sit against the lines they explain, and
+`ruff format` would rewrap all of it in one unreviewable commit. Wrap at 79
+columns like the code around you; 88 is the ceiling CI enforces, and the gap is
+room for the occasional line that reads worse broken than long.
+
 ## House rules
 
 These four are load-bearing. A PR that breaks one will be sent back even if the
