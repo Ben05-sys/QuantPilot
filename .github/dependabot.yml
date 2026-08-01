@@ -1,0 +1,20 @@
+version: 2
+
+updates:
+  # Actions drift fastest and break the loudest, so check them weekly.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: 'ci'
+
+  # The runtime floors in requirements.txt are deliberately loose; what this
+  # keeps current is the exact pin in requirements-dev.txt, so a new ruff
+  # release arrives as a pull request CI can prove rather than as a red
+  # branch on somebody else's morning.
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5

@@ -1,0 +1,25 @@
+# The house style, in the one place every editor reads without being asked.
+# Line endings are LF in the repository on every platform, which is what the
+# .gitattributes normalisation enforces on the way in.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# The source wraps at 79 and CI enforces 88 — see ruff.toml for why there
+# is a gap between those two numbers.
+[*.py]
+max_line_length = 88
+
+[*.{html,js,css,json,yml,yaml}]
+indent_size = 2
+
+[*.md]
+# Two trailing spaces are a hard line break in Markdown.
+trim_trailing_whitespace = false

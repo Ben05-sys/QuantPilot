@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/Ben05-sys/QuantPilot/security/advisories/new
+    about: >
+      Report privately instead of opening an issue. The server, the expression
+      parser and the article reader are the three places where a bug is a
+      security bug — see SECURITY.md.
+  - name: Somewhere to start
+    url: https://github.com/Ben05-sys/QuantPilot/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22
+    about: Open issues picked out as self-contained first contributions.

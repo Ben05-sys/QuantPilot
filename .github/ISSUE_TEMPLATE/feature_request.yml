@@ -1,0 +1,57 @@
+name: Feature request
+description: A view, a field, or a behaviour the terminal should have.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to find out?
+      description: >
+        Describe it as a question about the market, not as a UI change. "I
+        want to find names gapping up on volume before the open" tells us more
+        than "add a gap column", and often the answer is an expression that
+        already works.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you have in mind
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of change is it?
+      options:
+        - A screenable field
+        - A new view or panel
+        - The expression language
+        - Data source or provider
+        - Something else
+    validations:
+      required: true
+
+  - type: textarea
+    id: source
+    attributes:
+      label: Where would the data come from?
+      description: >
+        Only if the terminal does not already hold it. There is no budget and
+        no API key, so a paid feed is a no by default — and Yahoo's terms
+        already put a ceiling on what can be shipped rather than run locally.
+
+  - type: checkboxes
+    id: houserules
+    attributes:
+      label: House rules
+      description: >
+        Both are load-bearing — see
+        [CONTRIBUTING.md](https://github.com/Ben05-sys/QuantPilot/blob/main/CONTRIBUTING.md).
+      options:
+        - label: >
+            This does not require claiming live data over stale data, or
+            imputing a value the terminal cannot actually compute.
+          required: true

@@ -1,0 +1,81 @@
+name: Bug report
+description: Something in the terminal is wrong, stuck, or lying about data.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing: if this is a **security** issue — anything that lets
+        another page reach the local server, escapes the expression allowlist,
+        or turns the article reader into a general fetcher — please use
+        [a private advisory](https://github.com/Ben05-sys/QuantPilot/security/advisories/new)
+        instead. See [SECURITY.md](https://github.com/Ben05-sys/QuantPilot/blob/main/SECURITY.md).
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: >
+        The exact steps. If a screen is involved, paste the expression — the
+        command line shows it even when you built it from the dropdowns.
+      placeholder: |
+        1. python pilot.py
+        2. F2, then: mcap > 10b and relvol > 2
+        3. ...
+    validations:
+      required: true
+
+  - type: input
+    id: expression
+    attributes:
+      label: Expression, if the screener is involved
+      placeholder: rs > 3 and mcap > 2b
+
+  - type: textarea
+    id: header
+    attributes:
+      label: What the header said
+      description: >
+        The state and lag badges — `OPEN` / `CLOSED` / `OVERNIGHT`,
+        `LAG 4s`, `STREAM` or `POLL` — and the snapshot age on the right.
+        Half the reports that look like wrong data are a stale snapshot, and
+        this is how we tell in one glance.
+      placeholder: 'CLOSED · LAG 7.7h · POLL · snapshot 7,131 symbols · 35m old'
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows
+        - macOS
+        - Linux
+    validations:
+      required: true
+
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      description: '`python --version`. The floor is 3.11.'
+      placeholder: '3.13.2'
+    validations:
+      required: true
+
+  - type: textarea
+    id: console
+    attributes:
+      label: Console output
+      description: >
+        Anything printed in the window running `pilot.py`, and anything red in
+        the browser console (F12). Pasted as text rather than a screenshot,
+        if you can — it is searchable.
+      render: text

@@ -1,0 +1,12 @@
+# LF in the repository, whatever the working tree uses. This project is
+# developed on Windows and tested on three platforms; without this, a
+# contributor's first commit can arrive as "changed every line".
+* text=auto eol=lf
+
+*.png   binary
+*.ico   binary
+
+# The terminal is one HTML file holding the whole UI, so GitHub's language
+# stats read this repo as mostly HTML unless told that the file is the app.
+app/web/index.html linguist-detectable
+docs/*             linguist-documentation
