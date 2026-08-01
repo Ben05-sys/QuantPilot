@@ -75,7 +75,9 @@ button.hdr:hover{background:var(--amber);color:#000}
 .idx:hover{background:#151005}
 .idx b{color:var(--amber);font-weight:400;letter-spacing:.1em}
 .idx .px{color:var(--text)}
-#stripNote,
+#stripNote{display:flex;align-items:center;padding:0 11px;
+  color:var(--muted);white-space:nowrap}
+
 /* ---- body ---- */
 #main{flex:1;display:flex;min-height:0}
 #rail{width:44px;flex:0 0 44px;border-right:1px solid var(--line);
@@ -474,7 +476,7 @@ h3.hd{color:var(--amber);letter-spacing:.12em;margin:12px 0 4px}
 
 <div id="top">
   <span class="zone">
-    <span id="brand">PILOT MARKETS</span>
+    <span id="brand">QUANTPILOT</span>
     <span id="clock">--:--:--</span>
   </span>
   <span class="zone">
@@ -720,7 +722,7 @@ h3.hd{color:var(--amber);letter-spacing:.12em;margin:12px 0 4px}
 </div></div>
 
 <div id="help"><div class="box">
-  <h2>PILOT MARKETS — COMMAND REFERENCE</h2>
+  <h2>QUANTPILOT — COMMAND REFERENCE</h2>
   <table>
     <tr><td>NVDA</td><td>open the ticker view for a symbol</td></tr>
     <tr><td>screen &lt;expression&gt;</td><td>run a screen (also: <code>s &lt;expr&gt;</code>, or just type an expression)</td></tr>
@@ -3103,7 +3105,10 @@ async function loadIndices(){
           {minimumFractionDigits:2, maximumFractionDigits:2}):"—"}</span>`
       + `<span class="${cls(i.change_pct)}">${fpct(i.change_pct)}`
       + `${i.change_pct>0?" ▲":i.change_pct<0?" ▼":""}</span></div>`
-    ).join("") + `<span id="stripNote">${new Date().toLocaleTimeString()}</span>`;
+    // 24-hour, like the header clock: the default renders AM/PM by system
+    // locale, which reads oddly two inches from a 24-hour ET reading.
+    ).join("") + `<span id="stripNote">`
+      + `${new Date().toLocaleTimeString([], {hour12:false})}</span>`;
     strip.querySelectorAll(".idx").forEach(el=>
       el.onclick = ()=>openTicker(el.dataset.s));
   }catch(e){ /* the strip is decoration; never let it break the terminal */ }
