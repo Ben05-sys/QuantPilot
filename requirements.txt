@@ -16,6 +16,6 @@ numpy>=1.24
 # protobuf types for Yahoo's websocket pricing feed, which is also how
 # extended-hours prints arrive. Optional: app/stream.py probes for these
 # and the terminal falls back to polling if they are absent.
-yfinance>=1.3
+yfinance>=1.5.2
 websockets>=12.0
 protobuf>=5.0
