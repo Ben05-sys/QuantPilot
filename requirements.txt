@@ -10,7 +10,7 @@
 
 requests>=2.31
 pandas>=2.0
-numpy>=1.24
+numpy>=2.5.1
 
 # Real-time tick stream. yfinance ships the client and the generated
 # protobuf types for Yahoo's websocket pricing feed, which is also how
