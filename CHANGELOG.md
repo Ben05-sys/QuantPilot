@@ -10,6 +10,13 @@ saved screen will be called out here under **Changed** rather than buried.
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.1.1] — 2026-08-01
+
+Security release. 0.1.0 stood for about an hour; anyone who cloned it should
+take this instead.
+
 ### Security
 
 - **The article reader now re-checks the address on every redirect hop.** It
@@ -28,7 +35,24 @@ saved screen will be called out here under **Changed** rather than buried.
 - **The SEC contact address can no longer be sent anywhere but the SEC.** The
   agent carrying it was selected with `host.endswith("sec.gov")`, which also
   matches `notsec.gov`.
+- **A symbol went into one Yahoo URL unencoded.** `snapshot_lag` was the only
+  call of six that did not percent-encode, so a symbol carrying `?` or `/`
+  could rewrite the request it was meant to be a parameter of.
 - `tests/test_article.py` covers all of the above, and runs in CI.
+
+### Added
+
+- CodeQL analysis, `ruff` in CI against a pinned version, the live news and
+  article suites in the matrix, and community health files — SECURITY.md with
+  the threat model, a code of conduct, issue forms and a PR checklist.
+
+### Fixed
+
+- The header said `PILOT MARKETS`: the rename had reached the repository, the
+  docs and the data directory but not the page itself.
+- The index strip's timestamp stretched across the futures strip, because its
+  CSS rule had lost its declaration block and the selector ran on into the
+  next one. It also rendered in the system locale next to a 24-hour ET clock.
 
 ## [0.1.0] — 2026-08-01
 
@@ -87,5 +111,6 @@ point at which it is worth someone else's afternoon.
 - AGPL-3.0. The network clause is the point: a modified version run as a
   service other people can reach has to publish its source.
 
-[Unreleased]: https://github.com/Ben05-sys/QuantPilot/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Ben05-sys/QuantPilot/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/Ben05-sys/QuantPilot/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Ben05-sys/QuantPilot/releases/tag/v0.1.0
