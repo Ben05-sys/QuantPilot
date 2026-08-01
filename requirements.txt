@@ -8,7 +8,7 @@
 # The server and the UI have no dependencies at all — http.server and one
 # self-contained HTML file.
 
-requests>=2.31
+requests>=2.34.2
 pandas>=2.0
 numpy>=1.24
 
