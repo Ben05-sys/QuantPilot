@@ -9,12 +9,20 @@ updates:
     commit-message:
       prefix: 'ci'
 
-  # The runtime floors in requirements.txt are deliberately loose; what this
-  # keeps current is the exact pin in requirements-dev.txt, so a new ruff
-  # release arrives as a pull request CI can prove rather than as a red
+  # What this keeps current is the exact pin in requirements-dev.txt, so a new
+  # ruff release arrives as a pull request CI can prove rather than as a red
   # branch on somebody else's morning.
+  #
+  # `increase-if-necessary` is load-bearing. The floors in requirements.txt
+  # are deliberately low — `pandas>=2.0` means the terminal runs on the pandas
+  # someone already has. The default strategy raises a floor every time
+  # upstream releases, which reads like maintenance but is really a
+  # compatibility cut: `pandas>=3.0.5` drops every user on 2.x to buy nothing,
+  # because the code does not use anything 3.x added. So floors move only when
+  # the current range genuinely cannot resolve.
   - package-ecosystem: pip
     directory: /
+    versioning-strategy: increase-if-necessary
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
