@@ -1,0 +1,47 @@
+# Static analysis, on the two languages this repo actually contains: the
+# Python package and the JavaScript inside app/web/index.html, which the
+# extractor reads out of the <script> block like any other source file.
+#
+# Worth having here rather than trusting review: the terminal parses user
+# expressions, runs an HTTP server, and fetches pages on the user's behalf.
+# Those are the three places where a mistake is not a rendering bug.
+name: codeql
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly, so a newly published query finds old code without a push.
+    - cron: '17 5 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write     # the whole point: uploading the SARIF
+      actions: read
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [python, javascript-typescript]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: initialize
+        uses: github/codeql-action/init@v3
+        with:
+          language: ${{ matrix.language }}
+          queries: security-and-quality
+
+      - name: analyze
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:${{ matrix.language }}
