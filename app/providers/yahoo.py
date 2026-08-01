@@ -352,7 +352,8 @@ class YahooProvider:
     def snapshot_lag(self, symbol: str = "SPY") -> tuple[float | None, str | None]:
         """Measure how far behind the tape we actually are, for the UI badge.
         Returns (seconds, market_state)."""
-        url = f"{BASE}/v8/finance/chart/{symbol}?range=1d&interval=1d"
+        url = (f"{BASE}/v8/finance/chart/{quote_plus(symbol)}"
+               f"?range=1d&interval=1d")
         try:
             meta = json.loads(net.fetch(url, ttl=0, retries=1,
                                         timeout=15))["chart"]["result"][0]["meta"]
