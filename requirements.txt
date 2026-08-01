@@ -9,7 +9,7 @@
 # self-contained HTML file.
 
 requests>=2.31
-pandas>=2.0
+pandas>=3.0.5
 numpy>=1.24
 
 # Real-time tick stream. yfinance ships the client and the generated
