@@ -3,7 +3,8 @@
 [![tests](https://github.com/Ben05-sys/QuantPilot/actions/workflows/ci.yml/badge.svg)](https://github.com/Ben05-sys/QuantPilot/actions/workflows/ci.yml)
 
 A local market terminal: Finviz-class screening over the whole US universe,
-Bloomberg-style chrome, no API keys, no vendor, no monthly bill.
+the finance networks live beside the tape, Bloomberg-style chrome, no API
+keys, no vendor, no monthly bill.
 
 ![The screener](docs/screener.png)
 
@@ -14,6 +15,14 @@ the price sits in the day's range. Depth on demand, so the grid never has
 to grow a column for it.
 
 ![The heatmap](docs/heatmap.png)
+
+![Live news](docs/livenews.png)
+
+The US finance networks on their own YouTube channels, and what the current
+headlines are about next to them. The green dots are read from each channel
+rather than assumed, so the wall knows who is actually on air — here four of
+seven, coming up on midnight Eastern — and opens on the busiest rather than
+on a dead player.
 
 ## Install
 
