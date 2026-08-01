@@ -21,7 +21,8 @@ from .base import ProviderError
 URL = "https://cdn.cboe.com/api/global/delayed_quotes/options/{sym}.json"
 
 # Root is 1-6 chars, then 6 digits of date, then C or P, then 8 of strike.
-_OCC = re.compile(r"^(?P<root>[A-Z0-9]{1,6})(?P<ymd>\d{6})(?P<cp>[CP])(?P<strike>\d{8})$")
+_OCC = re.compile(r"^(?P<root>[A-Z0-9]{1,6})(?P<ymd>\d{6})"
+                  r"(?P<cp>[CP])(?P<strike>\d{8})$")
 
 
 def _parse_occ(sym: str) -> tuple[str | None, str | None, float | None]:

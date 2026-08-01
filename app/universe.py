@@ -12,9 +12,10 @@ architectural decision that separates this from a Finviz scraper.
 
 from __future__ import annotations
 
+import itertools
 import time
+from collections.abc import Callable
 from datetime import datetime
-from typing import Callable
 from zoneinfo import ZoneInfo
 
 import numpy as np
@@ -93,7 +94,8 @@ def refresh(progress: Progress = _noop, enrich: bool = True,
     rows = nasdaq.universe(ttl=0)
     by_symbol = {r["symbol"]: r for r in rows}
     if limit:
-        keep = sorted(by_symbol, key=lambda s: -(by_symbol[s]["market_cap"] or 0))[:limit]
+        keep = sorted(by_symbol,
+                      key=lambda s: -(by_symbol[s]["market_cap"] or 0))[:limit]
         by_symbol = {s: by_symbol[s] for s in keep}
     progress(f"{len(by_symbol)} symbols listed", 0.10)
 
@@ -174,7 +176,7 @@ def session_fraction(now: datetime | None = None) -> float:
     hours = (now.hour - 9) + (now.minute - 30) / 60.0
     if hours <= 0 or hours >= 6.5:
         return 1.0
-    for (h0, f0), (h1, f1) in zip(_VOLUME_CURVE, _VOLUME_CURVE[1:]):
+    for (h0, f0), (h1, f1) in itertools.pairwise(_VOLUME_CURVE):
         if hours <= h1:
             span = h1 - h0
             fraction = f0 + (f1 - f0) * ((hours - h0) / span if span else 0)
@@ -293,8 +295,10 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
         df["true_range"] = spans.max(axis=1, skipna=False)
     else:
         df["true_range"] = np.nan
-    df["pct_from_52w_high"] = safe(df["price"] - df["week52_high"], df["week52_high"]) * 100
-    df["pct_from_52w_low"] = safe(df["price"] - df["week52_low"], df["week52_low"]) * 100
+    df["pct_from_52w_high"] = safe(
+        df["price"] - df["week52_high"], df["week52_high"]) * 100
+    df["pct_from_52w_low"] = safe(
+        df["price"] - df["week52_low"], df["week52_low"]) * 100
     df["pct_from_sma50"] = safe(df["price"] - df["sma50"], df["sma50"]) * 100
     df["pct_from_sma200"] = safe(df["price"] - df["sma200"], df["sma200"]) * 100
     # Relative strength against a stock's own sector. "Up 3%" on a day the
@@ -393,13 +397,14 @@ def apply_live(quotes: dict) -> int:
         if field not in df.columns:
             continue
         fresh = pd.to_numeric(
-            symbols.map(lambda s: (quotes.get(s) or {}).get(field)),
+            symbols.map(lambda s, field=field: (quotes.get(s) or {}).get(field)),
             errors="coerce")
         df.loc[index, field] = fresh.where(fresh.notna(), df.loc[index, field])
     for field in ("ext_label", "market_state"):
         if field not in df.columns:
             continue
-        fresh = symbols.map(lambda s: (quotes.get(s) or {}).get(field))
+        fresh = symbols.map(
+            lambda s, field=field: (quotes.get(s) or {}).get(field))
         df.loc[index, field] = fresh.where(fresh.notna(), df.loc[index, field])
 
     # The derived columns are arithmetic on what just changed, so they are

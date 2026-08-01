@@ -266,8 +266,8 @@ def _probe() -> bool:
     """Is the streaming stack importable? Missing optional deps degrade to
     polling instead of breaking the terminal."""
     try:
-        import yfinance  # noqa: F401
         import websockets  # noqa: F401
+        import yfinance  # noqa: F401
         return True
     except Exception:  # noqa: BLE001
         return False

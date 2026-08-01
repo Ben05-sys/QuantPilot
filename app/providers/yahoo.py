@@ -25,7 +25,7 @@ import time
 from urllib.parse import quote_plus
 
 from .. import net
-from .base import Bars, Quote, ProviderError, register
+from .base import Bars, ProviderError, Quote, register
 
 BASE = "https://query1.finance.yahoo.com"
 

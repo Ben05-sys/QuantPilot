@@ -271,7 +271,7 @@ class _Evaluator(ast.NodeVisitor):
         # as Python reads them.
         result = None
         left = self.visit(node.left)
-        for op, comparator in zip(node.ops, node.comparators):
+        for op, comparator in zip(node.ops, node.comparators, strict=True):
             right = self.visit(comparator)
             piece = self._compare(left, op, right)
             result = piece if result is None else (result & piece)
@@ -453,20 +453,24 @@ def apply_quotes(df: pd.DataFrame, quotes: dict) -> pd.DataFrame:
     """
     if df.empty or not quotes:
         return df
-    from .universe import derive          # local: keeps screen.py importable
-                                          # without the provider stack
+    # Local import: keeps screen.py importable without the provider stack.
+    from .universe import derive
     out = df.copy()
     symbols = out["symbol"]
 
+    # `field=field` binds the loop variable at definition time. The lambda is
+    # consumed by .map() inside this iteration so late binding would not bite
+    # today, but it is one refactor away from doing so.
     for field in _OVERLAY_NUMERIC:
         fresh = pd.to_numeric(
-            symbols.map(lambda s: (quotes.get(s) or {}).get(field)),
+            symbols.map(lambda s, field=field: (quotes.get(s) or {}).get(field)),
             errors="coerce")
         if fresh.notna().any():
             out[field] = fresh.where(fresh.notna(),
                                      out[field] if field in out else np.nan)
     for field in _OVERLAY_TEXT:
-        fresh = symbols.map(lambda s: (quotes.get(s) or {}).get(field))
+        fresh = symbols.map(
+            lambda s, field=field: (quotes.get(s) or {}).get(field))
         if fresh.notna().any():
             out[field] = fresh.where(fresh.notna(),
                                      out[field] if field in out else None)
@@ -669,7 +673,7 @@ def to_records(df: pd.DataFrame, columns: list[str] | None = None) -> list[dict]
     out = []
     for row in df[cols].itertuples(index=False, name=None):
         rec = {}
-        for col, val in zip(cols, row):
+        for col, val in zip(cols, row, strict=True):
             if val is None or (isinstance(val, float) and val != val):
                 rec[col] = None
             elif isinstance(val, (np.integer,)):
@@ -684,7 +688,8 @@ def to_records(df: pd.DataFrame, columns: list[str] | None = None) -> list[dict]
     return out
 
 
-def group_summary(df: pd.DataFrame, column: str, liquid_only: bool = True) -> list[dict]:
+def group_summary(df: pd.DataFrame, column: str,
+                  liquid_only: bool = True) -> list[dict]:
     """Aggregate by `column`: count, total market cap, and a cap-weighted
     average change.
 

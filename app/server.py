@@ -27,8 +27,18 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
-from . import (article, clock, diffs, livenews, news, screen, store, stream,
-               universe, watchlist)
+from . import (
+    article,
+    clock,
+    diffs,
+    livenews,
+    news,
+    screen,
+    store,
+    stream,
+    universe,
+    watchlist,
+)
 from .config import load_config
 from .providers import sec, yahoo
 from .providers.base import ProviderError
@@ -682,7 +692,10 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 selected = json.loads(raw)
             except json.JSONDecodeError:
-                raise screen.ScreenError("filters must be a JSON object")
+                # `from None`: the caller sent bad JSON and wants to hear
+                # that, not the position of the offending byte.
+                raise screen.ScreenError(
+                    "filters must be a JSON object") from None
             compiled = screen.filters_to_expr(selected)
             if compiled and expr:
                 return f"({compiled}) and ({expr})"
@@ -1310,7 +1323,9 @@ def main(argv=None) -> int:
         print(f"  snapshot: {meta['rows']} symbols, {age:.0f} min old")
     else:
         print("  no snapshot yet — building the universe in the background")
-    print(f"  stream:   {'websocket' if state.stream.available else 'polling (yfinance/websockets missing)'}")
+    feed = ("websocket" if state.stream.available
+            else "polling (yfinance/websockets missing)")
+    print(f"  stream:   {feed}")
     print("  (Ctrl+C to stop)\n")
 
     if universe.is_stale():

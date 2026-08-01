@@ -150,7 +150,8 @@ def run():
           options.unusual("TEST", limit=1)["total"] > 1)
 
     print("\nempty chain")
-    empty = dict(fixture()); empty["contracts"] = []
+    empty = dict(fixture())
+    empty["contracts"] = []
     cboe.chain = lambda symbol, ttl=600: empty
     try:
         options.chain("TEST")

@@ -243,13 +243,17 @@ def main():
     print("\ntime-adjusted relative volume")
     import datetime
     from zoneinfo import ZoneInfo
+
     from app import universe as U
     ET = ZoneInfo("America/New_York")
     OPEN = datetime.datetime(2026, 7, 28, 9, 30, tzinfo=ET)
-    at = lambda h, m: U.session_fraction(
-        datetime.datetime(2026, 7, 28, h, m, tzinfo=ET))
-    after_open = lambda minutes: U.session_fraction(
-        OPEN + datetime.timedelta(minutes=minutes))
+    def at(h, m):
+        return U.session_fraction(
+            datetime.datetime(2026, 7, 28, h, m, tzinfo=ET))
+
+    def after_open(minutes):
+        return U.session_fraction(OPEN + datetime.timedelta(minutes=minutes))
+
     check("nothing expected before the open — a closed market compares "
           "full day to full day", at(8, 0) == 1.0)
     check("half the day by roughly 13:00",
@@ -369,7 +373,7 @@ def main():
         "sma200": [2.0, 200.0, 50.0, 10.0],
         "earnings_ts": [np.nan] * 4,
     }))
-    row = {s: r for s, r in zip(dv["symbol"], dv.to_dict("records"))}
+    row = dict(zip(dv["symbol"], dv.to_dict("records"), strict=True))
     check("dollar volume is price x volume",
           row["CHEAP"]["dollar_volume"] == 80e6, row["CHEAP"]["dollar_volume"])
     check("same share volume, 100x the money",
@@ -441,14 +445,15 @@ def main():
         "sma50": [82.0, 82.0], "sma200": [82.0, 82.0],
         "earnings_ts": [np.nan] * 2,
     }))
-    trrow = {s: r for s, r in zip(tr["symbol"], tr.to_dict("records"))}
+    trrow = dict(zip(tr["symbol"], tr.to_dict("records"), strict=True))
     check("ordinary day: true range is just the high/low bar",
           trrow["NORMAL"]["true_range"] == 4.0, trrow["NORMAL"]["true_range"])
     check("gap day: true range captures the overnight gap the bar misses",
           trrow["GAPPED"]["true_range"] == 22.0, trrow["GAPPED"]["true_range"])
     check("tr resolves", screen.resolve("tr") == "true_range")
     check("true range needs today's high/low, so it isn't prefiltered on a stale one",
-          "true_range" in screen.LIVE_COLUMNS and "true_range" not in screen.STATIC_SAFE)
+          "true_range" in screen.LIVE_COLUMNS
+          and "true_range" not in screen.STATIC_SAFE)
     check("a frame with no high/low derives rather than raising",
           derive(pd.DataFrame({
               "symbol": ["X"], "name": ["X"], "sector": ["T"], "price": [1.0],

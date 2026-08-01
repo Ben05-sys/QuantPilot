@@ -105,7 +105,8 @@ class MarketClock:
 
     # ---- the decision ----
 
-    def tick(self, market_state: str | None = None, now: float | None = None) -> str | None:
+    def tick(self, market_state: str | None = None,
+             now: float | None = None) -> str | None:
         """One pass. Returns the action taken, or None.
 
         Split out from the thread so it can be driven directly in tests —

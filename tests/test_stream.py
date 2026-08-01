@@ -70,10 +70,11 @@ def main():
         ("extchg > 5 and mcap > 1b", "mcap > 1000000000.0", "extchg > 5"),
     ]
     for expr, want_static, want_live in cases:
-        s, l = screen.split_live(expr)
+        static, live = screen.split_live(expr)
         if want_static is not None:
-            check(f"static half of {expr!r}", s == want_static, f"got {s!r}")
-        check(f"live half of {expr!r}", l == want_live, f"got {l!r}")
+            check(f"static half of {expr!r}", static == want_static,
+                  f"got {static!r}")
+        check(f"live half of {expr!r}", live == want_live, f"got {live!r}")
 
     check("market cap narrows before re-pricing",
           "market_cap" in screen.STATIC_SAFE)

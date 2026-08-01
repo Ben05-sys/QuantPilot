@@ -24,6 +24,7 @@ from __future__ import annotations
 import concurrent.futures
 import time
 import xml.etree.ElementTree as ET
+from datetime import UTC, datetime
 
 from . import article, net
 from .providers import yahoo
@@ -82,10 +83,9 @@ def _parse_date(text: str | None) -> float | None:
     for fmt in ("%Y-%m-%dT%H:%M:%SZ", "%a, %d %b %Y %H:%M:%S %z",
                 "%a, %d %b %Y %H:%M:%S %Z"):
         try:
-            from datetime import datetime, timezone
             parsed = datetime.strptime(text.strip(), fmt)
             if parsed.tzinfo is None:
-                parsed = parsed.replace(tzinfo=timezone.utc)
+                parsed = parsed.replace(tzinfo=UTC)
             return parsed.timestamp()
         except ValueError:
             continue

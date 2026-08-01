@@ -107,7 +107,8 @@ def load_config() -> dict:
         if env is None:
             env = os.environ.get(f"PILOTMARKETS_{key.upper()}")
         if env is not None:
-            cfg[key] = type(cfg[key])(env) if not isinstance(cfg[key], bool) else env == "1"
+            cfg[key] = (env == "1" if isinstance(cfg[key], bool)
+                        else type(cfg[key])(env))
     return cfg
 
 

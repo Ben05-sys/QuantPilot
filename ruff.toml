@@ -1,0 +1,26 @@
+# Lint only. There is deliberately no formatter in this project: the source
+# is hand-wrapped so that comments sit against the lines they explain, and
+# `ruff format` would rewrap all of it and bury the history in one commit.
+#
+# The house style wraps at 79 columns. The ceiling here is 88, which is what
+# CI enforces — the gap is room for the occasional line that reads worse
+# broken than long, not a licence to stop wrapping.
+
+line-length = 88
+target-version = "py311"
+
+[lint]
+select = [
+    "E",    # pycodestyle
+    "W",
+    "F",    # pyflakes: the ones that are usually real bugs
+    "I",    # import order
+    "UP",   # pyupgrade — the floor is 3.11, so use what 3.11 has
+    "B",    # bugbear: mutable defaults, loop-variable closures
+    "C4",   # comprehensions
+]
+
+[lint.per-file-ignores]
+# The suites are plain scripts run top to bottom, and a bare `assert` is the
+# whole point of them.
+"tests/*" = ["E402"]

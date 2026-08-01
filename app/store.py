@@ -205,7 +205,8 @@ def save_screen(name: str, expr: str) -> None:
     now = time.time()
     conn().execute(
         "INSERT INTO screens (name, expr, created_at, updated_at) VALUES (?,?,?,?) "
-        "ON CONFLICT(name) DO UPDATE SET expr=excluded.expr, updated_at=excluded.updated_at",
+        "ON CONFLICT(name) DO UPDATE SET expr=excluded.expr, "
+        "updated_at=excluded.updated_at",
         (name, expr, now, now))
     conn().commit()
 

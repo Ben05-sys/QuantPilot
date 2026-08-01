@@ -21,7 +21,6 @@ stops being able to say there isn't one.
 
 from __future__ import annotations
 
-import json
 import re
 
 from . import net
@@ -229,7 +228,7 @@ def _root_index(frame) -> dict[str, str]:
         return cached
 
     index: dict[str, str] = {}
-    for sym, name in zip(syms, frame["name"]):
+    for sym, name in zip(syms, frame["name"], strict=True):
         if not isinstance(name, str):
             continue
         base = _company_root(name)

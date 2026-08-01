@@ -136,7 +136,8 @@ class Cache:
     def put(self, url: str, body: bytes) -> None:
         conn = self._conn()
         conn.execute(
-            "INSERT OR REPLACE INTO cache (key, url, body, fetched_at) VALUES (?,?,?,?)",
+            "INSERT OR REPLACE INTO cache (key, url, body, fetched_at) "
+            "VALUES (?,?,?,?)",
             (self._key(url), url, body, time.time()),
         )
         conn.commit()

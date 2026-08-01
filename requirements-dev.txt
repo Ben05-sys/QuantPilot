@@ -1,0 +1,8 @@
+# Development only — the terminal itself needs nothing in here.
+#
+# Pinned exactly rather than floored: a linter that gains a rule overnight
+# turns a green branch red without a line of the project changing, and the
+# first person to hit that is a contributor who did nothing wrong.
+# Dependabot proposes the bump, CI proves it, then it lands.
+
+ruff==0.16.1
