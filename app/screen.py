@@ -35,7 +35,8 @@ DERIVED = ["rel_volume", "rel_volume_raw", "rel_volume_10d", "session_fraction",
            "pct_from_sma50", "pct_from_sma200", "earnings_days",
            "earnings_when", "peg", "mktcap", "chg", "is_adr",
            "rs_sector", "sector_change_pct",
-           "dollar_volume", "avg_dollar_volume", "day_range_pct", "gap_pct"]
+           "dollar_volume", "avg_dollar_volume", "day_range_pct", "gap_pct",
+           "true_range"]
 COLUMNS = [n for n, _ in store.UNIVERSE_COLUMNS] + DERIVED
 
 TEXT_COLUMNS = {"symbol", "name", "sector", "industry", "country",
@@ -60,6 +61,8 @@ LIVE_COLUMNS = {
     "gap_pct",
     # Built from today's volume, which only rises as the session runs.
     "rel_volume_10d",
+    # Built from today's high/low, which only widen as the session runs.
+    "true_range",
 }
 
 # Fields safe to narrow with *before* re-pricing. The distinction is not
@@ -120,6 +123,7 @@ ALIASES = {
     "liquidity": "avg_dollar_volume",
     "dayrange": "day_range_pct", "rangepos": "day_range_pct",
     "inrange": "day_range_pct", "gap": "gap_pct",
+    "tr": "true_range", "truerange": "true_range",
     "when": "earnings_when", "earningswhen": "earnings_when",
     "rs": "rs_sector", "vssector": "rs_sector",
     "sectorchg": "sector_change_pct",

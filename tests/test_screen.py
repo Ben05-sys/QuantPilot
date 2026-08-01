@@ -426,6 +426,37 @@ def main():
               "sma50": [1.0], "sma200": [1.0], "earnings_ts": [np.nan],
           }))["gap_pct"].isna().all())
 
+    print("\ntrue range")
+    tr = derive(pd.DataFrame({
+        "symbol": ["NORMAL", "GAPPED"], "name": ["N", "G"], "sector": ["T"] * 2,
+        "price": [82.0, 82.0], "change_pct": [0.0] * 2,
+        "volume": [1e6] * 2, "avg_volume_3m": [1e6] * 2, "market_cap": [1e9] * 2,
+        # NORMAL trades a plain 4-point bar. GAPPED opens far below
+        # yesterday's close and then sits still — a bar that looks tiny
+        # (high-low = 4) but only because most of the move already
+        # happened overnight.
+        "day_high": [84.0, 82.0], "day_low": [80.0, 78.0],
+        "prev_close": [83.0, 100.0], "open": [83.0, 80.0],
+        "week52_high": [90.0, 120.0], "week52_low": [70.0, 70.0],
+        "sma50": [82.0, 82.0], "sma200": [82.0, 82.0],
+        "earnings_ts": [np.nan] * 2,
+    }))
+    trrow = {s: r for s, r in zip(tr["symbol"], tr.to_dict("records"))}
+    check("ordinary day: true range is just the high/low bar",
+          trrow["NORMAL"]["true_range"] == 4.0, trrow["NORMAL"]["true_range"])
+    check("gap day: true range captures the overnight gap the bar misses",
+          trrow["GAPPED"]["true_range"] == 22.0, trrow["GAPPED"]["true_range"])
+    check("tr resolves", screen.resolve("tr") == "true_range")
+    check("true range needs today's high/low, so it isn't prefiltered on a stale one",
+          "true_range" in screen.LIVE_COLUMNS and "true_range" not in screen.STATIC_SAFE)
+    check("a frame with no high/low derives rather than raising",
+          derive(pd.DataFrame({
+              "symbol": ["X"], "name": ["X"], "sector": ["T"], "price": [1.0],
+              "change_pct": [0.0], "volume": [1.0], "avg_volume_3m": [1.0],
+              "market_cap": [1.0], "week52_high": [1.0], "week52_low": [1.0],
+              "sma50": [1.0], "sma200": [1.0], "earnings_ts": [np.nan],
+          }))["true_range"].isna().all())
+
     # Today's dollar volume only rises, so prefiltering on a stale one would
     # drop the names that have since crossed the line. The average is a
     # standing fact about the name and narrows safely.

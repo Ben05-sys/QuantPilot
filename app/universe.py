@@ -279,6 +279,20 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
         df["gap_pct"] = safe(df["open"] - df["prev_close"], df["prev_close"]) * 100
     else:
         df["gap_pct"] = np.nan
+    # The real daily range, in dollars: `day_high - day_low` alone misses
+    # the overnight gap, so a stock that gapped down hard and then sat
+    # still reads as barely having moved. skipna=False so a missing input
+    # yields null rather than a range computed from whatever happened to
+    # be present.
+    if {"day_high", "day_low", "prev_close"} <= set(df.columns):
+        spans = pd.concat([
+            df["day_high"] - df["day_low"],
+            (df["day_high"] - df["prev_close"]).abs(),
+            (df["day_low"] - df["prev_close"]).abs(),
+        ], axis=1)
+        df["true_range"] = spans.max(axis=1, skipna=False)
+    else:
+        df["true_range"] = np.nan
     df["pct_from_52w_high"] = safe(df["price"] - df["week52_high"], df["week52_high"]) * 100
     df["pct_from_52w_low"] = safe(df["price"] - df["week52_low"], df["week52_low"]) * 100
     df["pct_from_sma50"] = safe(df["price"] - df["sma50"], df["sma50"]) * 100
