@@ -100,7 +100,7 @@ def main():
     print("\nredirects are checked on every hop, not just the first")
     saved_session, saved_cache = net.session, net.cache
     try:
-        net.cache = lambda: NullCache()
+        net.cache = NullCache
 
         # The feed's URL is a real publisher; the publisher answers with a
         # redirect to the terminal's own API. Following that would make the

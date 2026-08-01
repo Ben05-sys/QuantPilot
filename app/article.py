@@ -44,7 +44,6 @@ _MAX = 4000
 # 100.64/10 carrier range were listed at all. Asking the `ipaddress` module
 # instead covers every spelling of every one of them, including the
 # 169.254.169.254 metadata address that makes SSRF worth doing.
-_MAX_REDIRECTS = 5
 
 
 def _addresses(host: str) -> list:
