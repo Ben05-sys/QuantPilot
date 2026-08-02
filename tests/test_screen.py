@@ -462,6 +462,17 @@ def main():
               "sma50": [1.0], "sma200": [1.0], "earnings_ts": [np.nan],
           }))["true_range"].isna().all())
 
+    print("\natr percent")
+    check("ordinary day as a percent of price",
+          abs(trrow["NORMAL"]["atr_pct"] - 4 / 82 * 100) < 1e-9,
+          trrow["NORMAL"]["atr_pct"])
+    check("gap day reads far larger once scaled by price",
+          abs(trrow["GAPPED"]["atr_pct"] - 22 / 82 * 100) < 1e-9,
+          trrow["GAPPED"]["atr_pct"])
+    check("atr resolves", screen.resolve("atr") == "atr_pct")
+    check("atr_pct needs today's range and price, so it isn't prefiltered on a stale one",
+          "atr_pct" in screen.LIVE_COLUMNS and "atr_pct" not in screen.STATIC_SAFE)
+
     # Today's dollar volume only rises, so prefiltering on a stale one would
     # drop the names that have since crossed the line. The average is a
     # standing fact about the name and narrows safely.

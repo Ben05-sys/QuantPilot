@@ -295,6 +295,11 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
         df["true_range"] = spans.max(axis=1, skipna=False)
     else:
         df["true_range"] = np.nan
+    # True range as a percent of price, so a $5 stock and a $500 stock can
+    # be screened on the same volatility line. The dollar figure alone
+    # favours expensive names for no reason connected to how much they
+    # actually move.
+    df["atr_pct"] = safe(df["true_range"], df["price"]) * 100
     df["pct_from_52w_high"] = safe(
         df["price"] - df["week52_high"], df["week52_high"]) * 100
     df["pct_from_52w_low"] = safe(
