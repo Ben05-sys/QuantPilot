@@ -311,7 +311,11 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
     # the tide. Cap-weighted, because an unweighted sector average is
     # dominated by microcaps nobody trades.
     if "sector" in df.columns:
-        weights = df["market_cap"].fillna(0)
+        # A name with no change_pct (halted, or missing from a partial
+        # refresh) must not count at all — zero-filling it while keeping
+        # its full market-cap weight would drag the sector toward flat
+        # exactly when the reading matters most.
+        weights = df["market_cap"].fillna(0).where(df["change_pct"].notna(), 0)
         parts = pd.DataFrame({
             "sector": df["sector"],
             "w": weights,

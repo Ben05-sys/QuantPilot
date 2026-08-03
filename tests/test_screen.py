@@ -236,6 +236,31 @@ def main():
     check("ADR + country composes",
           adr_df[screen.mask(adr_df, 'adr and country == "China"')
                  ]["symbol"].tolist() == ["BABA"])
+    print("\nsector relative strength")
+    from app.universe import derive as _derive
+    sec = _derive(pd.DataFrame({
+        "symbol": ["A", "B", "HALTED"], "name": ["A", "B", "H"],
+        "sector": ["Technology"] * 3,
+        # A and B agree the sector is up 10%. HALTED has no change_pct —
+        # a partial refresh or a trading halt — but carries most of the
+        # sector's market cap.
+        "price": [100.0] * 3, "change_pct": [10.0, 10.0, np.nan],
+        "volume": [1e6] * 3, "avg_volume_3m": [1e6] * 3,
+        "market_cap": [1e9, 1e9, 8e9],
+        "week52_high": [120.0] * 3, "week52_low": [80.0] * 3,
+        "sma50": [100.0] * 3, "sma200": [100.0] * 3,
+        "earnings_ts": [np.nan] * 3,
+    }))
+    secrow = dict(zip(sec["symbol"], sec.to_dict("records"), strict=True))
+    check("a name with no change_pct does not drag the sector average "
+          "toward flat just by having a market cap",
+          abs(secrow["A"]["sector_change_pct"] - 10.0) < 1e-9,
+          secrow["A"]["sector_change_pct"])
+    check("a stock in line with its sector reads zero relative strength",
+          abs(secrow["A"]["rs_sector"]) < 1e-9, secrow["A"]["rs_sector"])
+    check("a halted name with no change_pct gets no relative strength either",
+          pd.isna(secrow["HALTED"]["rs_sector"]))
+
     check("alias is_adr also resolves", screen.resolve("is_adr") == "is_adr")
     check("ADRs narrow before re-pricing — domicile does not drift",
           "is_adr" in screen.STATIC_SAFE)
