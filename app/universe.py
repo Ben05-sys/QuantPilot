@@ -306,6 +306,11 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
         df["price"] - df["week52_low"], df["week52_low"]) * 100
     df["pct_from_sma50"] = safe(df["price"] - df["sma50"], df["sma50"]) * 100
     df["pct_from_sma200"] = safe(df["price"] - df["sma200"], df["sma200"]) * 100
+    # SMA50 vs SMA200 as a percent apart — the golden-cross distance.
+    # `sma50 > sma200` alone only says which side of the cross a name is
+    # on; this is how far, so a screen can sort names by how developed the
+    # cross is rather than just filtering on the boolean.
+    df["sma_spread"] = safe(df["sma50"] - df["sma200"], df["sma200"]) * 100
     # Relative strength against a stock's own sector. "Up 3%" on a day the
     # whole sector rose 3% is not strength; this separates the move from
     # the tide. Cap-weighted, because an unweighted sector average is

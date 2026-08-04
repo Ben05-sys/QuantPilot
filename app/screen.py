@@ -36,7 +36,7 @@ DERIVED = ["rel_volume", "rel_volume_raw", "rel_volume_10d", "session_fraction",
            "earnings_when", "peg", "mktcap", "chg", "is_adr",
            "rs_sector", "sector_change_pct",
            "dollar_volume", "avg_dollar_volume", "day_range_pct", "gap_pct",
-           "true_range", "atr_pct"]
+           "true_range", "atr_pct", "sma_spread"]
 COLUMNS = [n for n, _ in store.UNIVERSE_COLUMNS] + DERIVED
 
 TEXT_COLUMNS = {"symbol", "name", "sector", "industry", "country",
@@ -80,6 +80,10 @@ STATIC_SAFE = {
     "week52_low", "week52_change_pct", "sma50", "sma200", "avg_volume_3m",
     "avg_volume_10d", "analyst_rating", "earnings_ts", "earnings_days",
     "earnings_when", "peg", "prev_close", "is_adr",
+    # Both inputs are themselves slow-moving averages a snapshot old by a
+    # few hours does not change; unlike `pct_from_sma50` it does not also
+    # depend on today's price.
+    "sma_spread",
     # Average dollar volume is a liquidity floor, not a reading of the
     # tape: `avgdvol > 20m` means "this name normally trades enough to get
     # out of", and half a day of price drift does not change that answer.
@@ -105,6 +109,7 @@ ALIASES = {
     "from52high": "pct_from_52w_high", "from52low": "pct_from_52w_low",
     "fromsma50": "pct_from_sma50", "fromsma200": "pct_from_sma200",
     "sma50pct": "pct_from_sma50", "sma200pct": "pct_from_sma200",
+    "smaspread": "sma_spread", "crossdist": "sma_spread",
     "rating": "analyst_rating", "earnings": "earnings_days",
     "ipo": "ipo_year", "type": "quote_type", "state": "market_state",
     "lag": "lag_seconds",

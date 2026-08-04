@@ -498,6 +498,26 @@ def main():
     check("atr_pct needs today's range and price, so it isn't prefiltered on a stale one",
           "atr_pct" in screen.LIVE_COLUMNS and "atr_pct" not in screen.STATIC_SAFE)
 
+    print("\nsma spread")
+    ss = derive(pd.DataFrame({
+        "symbol": ["CROSSED", "BELOW"], "name": ["C", "B"], "sector": ["T"] * 2,
+        "price": [100.0, 100.0], "change_pct": [0.0] * 2,
+        "volume": [1e6] * 2, "avg_volume_3m": [1e6] * 2, "market_cap": [1e9] * 2,
+        "week52_high": [110.0] * 2, "week52_low": [90.0] * 2,
+        "sma50": [110.0, 95.0], "sma200": [100.0, 100.0],
+        "earnings_ts": [np.nan] * 2,
+    }))
+    ssrow = dict(zip(ss["symbol"], ss.to_dict("records"), strict=True))
+    check("above the 200-day: spread is positive and sized",
+          abs(ssrow["CROSSED"]["sma_spread"] - 10.0) < 1e-9,
+          ssrow["CROSSED"]["sma_spread"])
+    check("below the 200-day: spread is negative",
+          abs(ssrow["BELOW"]["sma_spread"] - (-5.0)) < 1e-9,
+          ssrow["BELOW"]["sma_spread"])
+    check("smaspread resolves", screen.resolve("smaspread") == "sma_spread")
+    check("sma_spread depends only on two slow-moving averages, so it narrows safely stale",
+          "sma_spread" in screen.STATIC_SAFE and "sma_spread" not in screen.LIVE_COLUMNS)
+
     # Today's dollar volume only rises, so prefiltering on a stale one would
     # drop the names that have since crossed the line. The average is a
     # standing fact about the name and narrows safely.
