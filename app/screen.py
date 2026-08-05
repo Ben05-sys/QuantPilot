@@ -36,7 +36,7 @@ DERIVED = ["rel_volume", "rel_volume_raw", "rel_volume_10d", "session_fraction",
            "earnings_when", "peg", "mktcap", "chg", "is_adr",
            "rs_sector", "sector_change_pct",
            "dollar_volume", "avg_dollar_volume", "day_range_pct", "gap_pct",
-           "true_range", "atr_pct", "sma_spread"]
+           "true_range", "atr_pct", "sma_spread", "intraday_pct"]
 COLUMNS = [n for n, _ in store.UNIVERSE_COLUMNS] + DERIVED
 
 TEXT_COLUMNS = {"symbol", "name", "sector", "industry", "country",
@@ -58,7 +58,7 @@ LIVE_COLUMNS = {
     # moves with all three of its.
     "dollar_volume", "avg_dollar_volume", "day_range_pct",
     # Built from today's open, which a stale snapshot may not have yet.
-    "gap_pct",
+    "gap_pct", "intraday_pct",
     # Built from today's volume, which only rises as the session runs.
     "rel_volume_10d",
     # Built from today's high/low, which only widen as the session runs.
@@ -128,6 +128,7 @@ ALIASES = {
     "liquidity": "avg_dollar_volume",
     "dayrange": "day_range_pct", "rangepos": "day_range_pct",
     "inrange": "day_range_pct", "gap": "gap_pct",
+    "intraday": "intraday_pct", "sinceopen": "intraday_pct",
     "tr": "true_range", "truerange": "true_range",
     "atr": "atr_pct", "atrpct": "atr_pct",
     "when": "earnings_when", "earningswhen": "earnings_when",

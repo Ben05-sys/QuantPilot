@@ -281,6 +281,15 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
         df["gap_pct"] = safe(df["open"] - df["prev_close"], df["prev_close"]) * 100
     else:
         df["gap_pct"] = np.nan
+    # The move since *today's open*, not yesterday's close. `chg` conflates
+    # the overnight gap with what has happened during the session; a name
+    # can gap up 5% and then sell off all day, which is a very different
+    # stock from one that opened flat and has run up 5% since. Splitting
+    # the two is what `gap_pct` (overnight) and this (intraday) are for.
+    if "open" in df.columns:
+        df["intraday_pct"] = safe(df["price"] - df["open"], df["open"]) * 100
+    else:
+        df["intraday_pct"] = np.nan
     # The real daily range, in dollars: `day_high - day_low` alone misses
     # the overnight gap, so a stock that gapped down hard and then sat
     # still reads as barely having moved. skipna=False so a missing input

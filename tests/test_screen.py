@@ -455,6 +455,31 @@ def main():
               "sma50": [1.0], "sma200": [1.0], "earnings_ts": [np.nan],
           }))["gap_pct"].isna().all())
 
+    print("\nintraday percent")
+    check("gapped up but sold off since the open reads negative",
+          abs(row["CHEAP"]["intraday_pct"] - (-100 / 21)) < 1e-9,
+          row["CHEAP"]["intraday_pct"])
+    check("distinct from chg: CHEAP is flat on the day yet moved intraday",
+          row["CHEAP"]["chg"] == 0.0 and row["CHEAP"]["intraday_pct"] != 0.0,
+          (row["CHEAP"]["chg"], row["CHEAP"]["intraday_pct"]))
+    check("gapped down but ran since the open reads positive",
+          abs(row["DEAR"]["intraday_pct"] - 300 / 97) < 1e-9,
+          row["DEAR"]["intraday_pct"])
+    check("opened at price is a real zero, not null",
+          row["FLAT"]["intraday_pct"] == 0.0, row["FLAT"]["intraday_pct"])
+    check("intraday resolves", screen.resolve("intraday") == "intraday_pct")
+    check("sinceopen resolves too", screen.resolve("sinceopen") == "intraday_pct")
+    check("intraday needs a live price and today's open, so it isn't prefiltered stale",
+          "intraday_pct" in screen.LIVE_COLUMNS
+          and "intraday_pct" not in screen.STATIC_SAFE)
+    check("a frame with no open derives rather than raising",
+          derive(pd.DataFrame({
+              "symbol": ["X"], "name": ["X"], "sector": ["T"], "price": [1.0],
+              "change_pct": [0.0], "volume": [1.0], "avg_volume_3m": [1.0],
+              "market_cap": [1.0], "week52_high": [1.0], "week52_low": [1.0],
+              "sma50": [1.0], "sma200": [1.0], "earnings_ts": [np.nan],
+          }))["intraday_pct"].isna().all())
+
     print("\ntrue range")
     tr = derive(pd.DataFrame({
         "symbol": ["NORMAL", "GAPPED"], "name": ["N", "G"], "sector": ["T"] * 2,
