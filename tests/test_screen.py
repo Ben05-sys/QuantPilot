@@ -435,6 +435,22 @@ def main():
               "sma50": [1.0], "sma200": [1.0], "earnings_ts": [np.nan],
           }))["day_range_pct"].isna().all())
 
+    print("\n52-week range position")
+    check("sitting at the midpoint of the range reads 50",
+          abs(row["CHEAP"]["pct_52w_range"] - 50.0) < 1e-9,
+          row["CHEAP"]["pct_52w_range"])
+    check("closer to the low end of a wide range reads well under 50",
+          abs(row["DEAR"]["pct_52w_range"] - 200 / 3) < 1e-9,
+          row["DEAR"]["pct_52w_range"])
+    check("distinct from pct_from_52w_high: NOTRADE is 33% off its high "
+          "but only 29% up its range, because the range itself is wide",
+          abs(row["NOTRADE"]["pct_52w_range"] - 200 / 7) < 1e-9,
+          row["NOTRADE"]["pct_52w_range"])
+    check("pos52 resolves", screen.resolve("pos52") == "pct_52w_range")
+    check("pct_52w_range needs a live price, so it isn't prefiltered on a stale one",
+          "pct_52w_range" in screen.LIVE_COLUMNS
+          and "pct_52w_range" not in screen.STATIC_SAFE)
+
     print("\ngap percent")
     check("gapped up 5%", abs(row["CHEAP"]["gap_pct"] - 5.0) < 1e-9,
           row["CHEAP"]["gap_pct"])

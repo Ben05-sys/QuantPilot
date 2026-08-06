@@ -313,6 +313,13 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
         df["price"] - df["week52_high"], df["week52_high"]) * 100
     df["pct_from_52w_low"] = safe(
         df["price"] - df["week52_low"], df["week52_low"]) * 100
+    # Where price sits *within* the 52-week range, 0 at the low and 100 at
+    # the high — distinct from the two lines above, which each measure
+    # distance from one endpoint alone. A name 40% off its high can be near
+    # the top of a narrow range or the bottom of a wide one; this is the one
+    # number that says which, the same way `day_range_pct` does for a day.
+    df["pct_52w_range"] = safe(
+        df["price"] - df["week52_low"], df["week52_high"] - df["week52_low"]) * 100
     df["pct_from_sma50"] = safe(df["price"] - df["sma50"], df["sma50"]) * 100
     df["pct_from_sma200"] = safe(df["price"] - df["sma200"], df["sma200"]) * 100
     # SMA50 vs SMA200 as a percent apart — the golden-cross distance.

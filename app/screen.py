@@ -31,7 +31,7 @@ from . import store
 
 # Real columns, from the snapshot table plus what universe.derive() adds.
 DERIVED = ["rel_volume", "rel_volume_raw", "rel_volume_10d", "session_fraction",
-           "pct_from_52w_high", "pct_from_52w_low",
+           "pct_from_52w_high", "pct_from_52w_low", "pct_52w_range",
            "pct_from_sma50", "pct_from_sma200", "earnings_days",
            "earnings_when", "peg", "mktcap", "chg", "is_adr",
            "rs_sector", "sector_change_pct",
@@ -52,8 +52,8 @@ LIVE_COLUMNS = {
     "post_change_pct", "ext_price", "ext_change_pct", "ext_label",
     "market_state", "chg", "mktcap", "rs_sector", "sector_change_pct",
     # Derived from price, so they go stale with it.
-    "pct_from_52w_high", "pct_from_52w_low", "pct_from_sma50",
-    "pct_from_sma200",
+    "pct_from_52w_high", "pct_from_52w_low", "pct_52w_range",
+    "pct_from_sma50", "pct_from_sma200",
     # Dollar volume moves with both of its factors; the day-range position
     # moves with all three of its.
     "dollar_volume", "avg_dollar_volume", "day_range_pct",
@@ -107,6 +107,7 @@ ALIASES = {
     "high52": "week52_high", "low52": "week52_low",
     "perf52": "week52_change_pct",
     "from52high": "pct_from_52w_high", "from52low": "pct_from_52w_low",
+    "pos52": "pct_52w_range", "range52pos": "pct_52w_range",
     "fromsma50": "pct_from_sma50", "fromsma200": "pct_from_sma200",
     "sma50pct": "pct_from_sma50", "sma200pct": "pct_from_sma200",
     "smaspread": "sma_spread", "crossdist": "sma_spread",
