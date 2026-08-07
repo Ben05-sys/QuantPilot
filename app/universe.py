@@ -357,6 +357,15 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
     # react, the other moves it while the market is shut.
     df["earnings_when"] = _earnings_when(df["earnings_ts"])
     df["peg"] = np.nan  # needs growth estimates; left honest rather than faked
+    # Earnings yield: trailing EPS as a percent of price, the reciprocal of
+    # P/E. A P/E is meaningless on a loss-making name — the ratio flips sign
+    # and screens like `pe < 15` silently exclude it rather than flag the
+    # loss. Earnings yield stays a real, sortable number on both sides of
+    # zero, which is the whole point of asking the question this way.
+    if "eps_ttm" in df.columns:
+        df["earnings_yield"] = safe(df["eps_ttm"], df["price"]) * 100
+    else:
+        df["earnings_yield"] = np.nan
     # ADRs, from the security type Nasdaq puts in the name. Derived rather
     # than stored so it works on snapshots taken before the field existed —
     # `name` has always been there.

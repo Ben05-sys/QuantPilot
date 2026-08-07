@@ -559,6 +559,28 @@ def main():
     check("sma_spread depends only on two slow-moving averages, so it narrows safely stale",
           "sma_spread" in screen.STATIC_SAFE and "sma_spread" not in screen.LIVE_COLUMNS)
 
+    print("\nearnings yield")
+    ey = derive(pd.DataFrame({
+        "symbol": ["EARNER", "LOSER"], "name": ["E", "L"], "sector": ["T"] * 2,
+        "price": [50.0, 50.0], "change_pct": [0.0] * 2,
+        "volume": [1e6] * 2, "avg_volume_3m": [1e6] * 2, "market_cap": [1e9] * 2,
+        "week52_high": [60.0] * 2, "week52_low": [40.0] * 2,
+        "sma50": [50.0] * 2, "sma200": [50.0] * 2,
+        "eps_ttm": [2.5, -1.0], "pe": [20.0, np.nan],
+        "earnings_ts": [np.nan] * 2,
+    }))
+    eyrow = dict(zip(ey["symbol"], ey.to_dict("records"), strict=True))
+    check("profitable name: yield is eps over price, as a percent",
+          abs(eyrow["EARNER"]["earnings_yield"] - 5.0) < 1e-9,
+          eyrow["EARNER"]["earnings_yield"])
+    check("loss-making name: yield stays negative where P/E goes undefined",
+          abs(eyrow["LOSER"]["earnings_yield"] - (-2.0)) < 1e-9,
+          eyrow["LOSER"]["earnings_yield"])
+    check("eyield resolves", screen.resolve("eyield") == "earnings_yield")
+    check("earnings yield tracks eps, not price, so it narrows safely stale",
+          "earnings_yield" in screen.STATIC_SAFE
+          and "earnings_yield" not in screen.LIVE_COLUMNS)
+
     # Today's dollar volume only rises, so prefiltering on a stale one would
     # drop the names that have since crossed the line. The average is a
     # standing fact about the name and narrows safely.
