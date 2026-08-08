@@ -581,6 +581,27 @@ def main():
           "earnings_yield" in screen.STATIC_SAFE
           and "earnings_yield" not in screen.LIVE_COLUMNS)
 
+    print("\neps growth")
+    eg = derive(pd.DataFrame({
+        "symbol": ["GROWER", "RECOVERING"], "name": ["G", "R"], "sector": ["T"] * 2,
+        "price": [50.0, 50.0], "change_pct": [0.0] * 2,
+        "volume": [1e6] * 2, "avg_volume_3m": [1e6] * 2, "market_cap": [1e9] * 2,
+        "week52_high": [60.0] * 2, "week52_low": [40.0] * 2,
+        "sma50": [50.0] * 2, "sma200": [50.0] * 2,
+        "eps_ttm": [2.0, -1.0], "eps_forward": [2.5, -0.5],
+        "earnings_ts": [np.nan] * 2,
+    }))
+    egrow = dict(zip(eg["symbol"], eg.to_dict("records"), strict=True))
+    check("profitable name: growth is forward over trailing, as a percent",
+          abs(egrow["GROWER"]["eps_growth"] - 25.0) < 1e-9,
+          egrow["GROWER"]["eps_growth"])
+    check("loss narrowing toward zero still reads as growth, not decline",
+          abs(egrow["RECOVERING"]["eps_growth"] - 50.0) < 1e-9,
+          egrow["RECOVERING"]["eps_growth"])
+    check("epsgrowth resolves", screen.resolve("epsgrowth") == "eps_growth")
+    check("eps growth tracks two estimates, not price, so it narrows safely stale",
+          "eps_growth" in screen.STATIC_SAFE and "eps_growth" not in screen.LIVE_COLUMNS)
+
     # Today's dollar volume only rises, so prefiltering on a stale one would
     # drop the names that have since crossed the line. The average is a
     # standing fact about the name and narrows safely.

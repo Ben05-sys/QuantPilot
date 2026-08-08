@@ -37,7 +37,7 @@ DERIVED = ["rel_volume", "rel_volume_raw", "rel_volume_10d", "session_fraction",
            "rs_sector", "sector_change_pct",
            "dollar_volume", "avg_dollar_volume", "day_range_pct", "gap_pct",
            "true_range", "atr_pct", "sma_spread", "intraday_pct",
-           "earnings_yield"]
+           "earnings_yield", "eps_growth"]
 COLUMNS = [n for n, _ in store.UNIVERSE_COLUMNS] + DERIVED
 
 TEXT_COLUMNS = {"symbol", "name", "sector", "industry", "country",
@@ -89,6 +89,10 @@ STATIC_SAFE = {
     # barely moves intraday, so a few hours of price drift does not change
     # which side of a yield threshold a name falls on.
     "earnings_yield",
+    # Both inputs are analyst estimates that update on their own schedule,
+    # not with the tape — same drift tolerance as the `eps_ttm`/`eps_forward`
+    # they're built from.
+    "eps_growth",
     # Average dollar volume is a liquidity floor, not a reading of the
     # tape: `avgdvol > 20m` means "this name normally trades enough to get
     # out of", and half a day of price drift does not change that answer.
@@ -108,6 +112,7 @@ ALIASES = {
     "shares": "shares_outstanding", "float": "shares_outstanding",
     "eps": "eps_ttm", "fpe": "forward_pe", "pricetobook": "pb",
     "eyield": "earnings_yield", "earningsyield": "earnings_yield",
+    "epsgrowth": "eps_growth", "growth": "eps_growth",
     "div": "dividend_yield", "divyield": "dividend_yield",
     "hi52": "week52_high", "lo52": "week52_low",
     "high52": "week52_high", "low52": "week52_low",

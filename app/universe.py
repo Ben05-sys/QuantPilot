@@ -366,6 +366,16 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
         df["earnings_yield"] = safe(df["eps_ttm"], df["price"]) * 100
     else:
         df["earnings_yield"] = np.nan
+    # Forward EPS against trailing EPS, as a percent — the growth term PEG
+    # needs and P/E alone can't supply. Divided by the *magnitude* of
+    # trailing EPS rather than the signed figure: a name working back from
+    # a loss (eps_ttm < 0) is still growing when estimates improve, and
+    # dividing by a negative would flip that into a phantom decline.
+    if "eps_ttm" in df.columns and "eps_forward" in df.columns:
+        df["eps_growth"] = safe(df["eps_forward"] - df["eps_ttm"],
+                                 df["eps_ttm"].abs()) * 100
+    else:
+        df["eps_growth"] = np.nan
     # ADRs, from the security type Nasdaq puts in the name. Derived rather
     # than stored so it works on snapshots taken before the field existed —
     # `name` has always been there.
