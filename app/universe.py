@@ -356,7 +356,6 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
     # close are different risks entirely: one gaps the stock before you can
     # react, the other moves it while the market is shut.
     df["earnings_when"] = _earnings_when(df["earnings_ts"])
-    df["peg"] = np.nan  # needs growth estimates; left honest rather than faked
     # Earnings yield: trailing EPS as a percent of price, the reciprocal of
     # P/E. A P/E is meaningless on a loss-making name — the ratio flips sign
     # and screens like `pe < 15` silently exclude it rather than flag the
@@ -376,6 +375,15 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
                                  df["eps_ttm"].abs()) * 100
     else:
         df["eps_growth"] = np.nan
+    # PEG: P/E against forward growth, the ratio a bare multiple can't give.
+    # `eps_growth` above finally supplies the missing term. Null whenever
+    # growth is zero or negative rather than dividing by it — a shrinking
+    # or flat estimate would flip the sign into something that reads like
+    # a bargain when it is actually a business going backwards.
+    if "pe" in df.columns:
+        df["peg"] = safe(df["pe"], df["eps_growth"].where(df["eps_growth"] > 0))
+    else:
+        df["peg"] = np.nan
     # ADRs, from the security type Nasdaq puts in the name. Derived rather
     # than stored so it works on snapshots taken before the field existed —
     # `name` has always been there.

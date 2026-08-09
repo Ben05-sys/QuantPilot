@@ -602,6 +602,24 @@ def main():
     check("eps growth tracks two estimates, not price, so it narrows safely stale",
           "eps_growth" in screen.STATIC_SAFE and "eps_growth" not in screen.LIVE_COLUMNS)
 
+    print("\npeg")
+    pg = derive(pd.DataFrame({
+        "symbol": ["GROWER", "DECLINER"], "name": ["G", "D"], "sector": ["T"] * 2,
+        "price": [50.0, 50.0], "change_pct": [0.0] * 2,
+        "volume": [1e6] * 2, "avg_volume_3m": [1e6] * 2, "market_cap": [1e9] * 2,
+        "week52_high": [60.0] * 2, "week52_low": [40.0] * 2,
+        "sma50": [50.0] * 2, "sma200": [50.0] * 2,
+        "pe": [20.0, 15.0], "eps_ttm": [2.0, 2.0], "eps_forward": [2.5, 1.5],
+        "earnings_ts": [np.nan] * 2,
+    }))
+    pgrow = dict(zip(pg["symbol"], pg.to_dict("records"), strict=True))
+    check("growing name: peg is P/E over the growth rate eps_growth supplies",
+          abs(pgrow["GROWER"]["peg"] - 0.8) < 1e-9, pgrow["GROWER"]["peg"])
+    check("shrinking estimates: peg stays null rather than flip sign into a fake bargain",
+          np.isnan(pgrow["DECLINER"]["peg"]), pgrow["DECLINER"]["peg"])
+    check("peg tracks the same slow-moving inputs as pe and eps_growth, so it narrows safely stale",
+          "peg" in screen.STATIC_SAFE and "peg" not in screen.LIVE_COLUMNS)
+
     # Today's dollar volume only rises, so prefiltering on a stale one would
     # drop the names that have since crossed the line. The average is a
     # standing fact about the name and narrows safely.
