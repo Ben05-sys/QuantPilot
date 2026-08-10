@@ -620,6 +620,27 @@ def main():
     check("peg tracks the same slow-moving inputs as pe and eps_growth, so it narrows safely stale",
           "peg" in screen.STATIC_SAFE and "peg" not in screen.LIVE_COLUMNS)
 
+    print("\npayout ratio")
+    pr = derive(pd.DataFrame({
+        "symbol": ["COVERED", "LOSER"], "name": ["C", "L"], "sector": ["T"] * 2,
+        "price": [50.0, 50.0], "change_pct": [0.0] * 2,
+        "volume": [1e6] * 2, "avg_volume_3m": [1e6] * 2, "market_cap": [1e9] * 2,
+        "week52_high": [60.0] * 2, "week52_low": [40.0] * 2,
+        "sma50": [50.0] * 2, "sma200": [50.0] * 2,
+        "eps_ttm": [4.0, -1.0], "dividend_rate": [1.0, 1.0],
+        "earnings_ts": [np.nan] * 2,
+    }))
+    prrow = dict(zip(pr["symbol"], pr.to_dict("records"), strict=True))
+    check("profitable name: payout is dividend over trailing eps, as a percent",
+          abs(prrow["COVERED"]["payout_ratio"] - 25.0) < 1e-9,
+          prrow["COVERED"]["payout_ratio"])
+    check("loss-making name: payout stays null rather than a fake positive number",
+          np.isnan(prrow["LOSER"]["payout_ratio"]), prrow["LOSER"]["payout_ratio"])
+    check("payout resolves", screen.resolve("payout") == "payout_ratio")
+    check("payout ratio tracks dividend and trailing eps, not price, so it narrows safely stale",
+          "payout_ratio" in screen.STATIC_SAFE
+          and "payout_ratio" not in screen.LIVE_COLUMNS)
+
     # Today's dollar volume only rises, so prefiltering on a stale one would
     # drop the names that have since crossed the line. The average is a
     # standing fact about the name and narrows safely.

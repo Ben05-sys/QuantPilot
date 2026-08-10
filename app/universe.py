@@ -384,6 +384,17 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
         df["peg"] = safe(df["pe"], df["eps_growth"].where(df["eps_growth"] > 0))
     else:
         df["peg"] = np.nan
+    # Payout ratio: the dividend as a percent of trailing EPS — is the
+    # dividend actually covered by earnings, or is it being paid out of
+    # reserves. Null rather than negative when the name is loss-making:
+    # dividing by a negative eps_ttm would flip the sign into a small
+    # positive-looking number that reads like a *safe*, well-covered payout
+    # when the truth is there is no earnings to cover it from at all.
+    if "dividend_rate" in df.columns and "eps_ttm" in df.columns:
+        df["payout_ratio"] = safe(df["dividend_rate"],
+                                   df["eps_ttm"].where(df["eps_ttm"] > 0)) * 100
+    else:
+        df["payout_ratio"] = np.nan
     # ADRs, from the security type Nasdaq puts in the name. Derived rather
     # than stored so it works on snapshots taken before the field existed —
     # `name` has always been there.
