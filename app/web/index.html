@@ -183,6 +183,48 @@ button.act:hover{background:var(--amber);color:#000}
 .erow .ev{width:74px;flex:0 0 74px;text-align:right}
 .erow .ec{width:62px;flex:0 0 62px;text-align:right}
 
+/* ---- dividends and IPOs ---- */
+#divWrap,#ipoWrap{flex:1;overflow-y:auto;background:var(--panel)}
+/* The ex-date row reuses .eday/.erow geometry; only the extra numeric
+   columns are new, so the two calendars read as the same kind of board. */
+.erow .dv{width:66px;flex:0 0 66px;text-align:right}
+.erow .dd{width:58px;flex:0 0 58px;text-align:right;color:var(--muted)}
+/* A payment the company is not earning. Amber, not red: a payout over
+   100% is a fact worth seeing, not an error — REITs and funds live there
+   by construction. Red is reserved for a loss. */
+.erow .dp.over{color:var(--amber-hi)}
+.erow .dp.loss{color:var(--red)}
+.ipotabs{display:inline-flex;gap:1px}
+.ipotab{padding:1px 8px;cursor:pointer;color:var(--amber-dim);
+  border:1px solid var(--line)}
+.ipotab:hover{background:#1c1405}
+.ipotab.on{background:var(--amber);color:#000}
+.irow{display:flex;align-items:center;gap:6px;padding:1px 9px;
+  border-bottom:1px solid #100c04}
+.irow.click{cursor:pointer}
+.irow.click:hover{background:#1c1405}
+.irow .is{color:var(--amber-hi);width:74px;flex:0 0 74px}
+/* A symbol that does not trade yet is not a link. Dimming it is the only
+   honest affordance: the ticker view would have nothing to show. */
+.irow .is.unlisted{color:var(--muted)}
+.irow .inm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;color:var(--muted)}
+.irow .ix{width:130px;flex:0 0 130px;color:var(--muted);overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.irow .iv{width:96px;flex:0 0 96px;text-align:right}
+.irow .id8{width:82px;flex:0 0 82px;text-align:right;color:var(--muted)}
+.ihead{background:#150f04;border-top:1px solid var(--line-hi);
+  border-bottom:1px solid var(--line-hi);position:sticky;top:0;z-index:2;
+  color:var(--amber);letter-spacing:.1em}
+.ihead:hover{background:#150f04}
+.ihead .inm,.ihead .ix,.ihead .id8,.ihead .is{color:var(--amber)}
+/* The dividend header borrows .erow's geometry so the labels sit over the
+   columns they name, and overrides only what makes a row a row. */
+.dhead{cursor:default;background:#150f04;color:var(--amber);
+  letter-spacing:.1em;border-bottom:1px solid var(--line-hi)}
+.dhead:hover{background:#150f04}
+.dhead .en,.dhead .dd{color:var(--amber)}
+
 /* ---- saved-screen diffs ---- */
 .sv .dif{flex:0 0 auto;color:var(--muted);white-space:nowrap}
 .sv .dif .up{color:var(--green)} .sv .dif .dn{color:var(--red)}
@@ -517,6 +559,11 @@ h3.hd{color:var(--amber);letter-spacing:.12em;margin:12px 0 4px}
     <div class="tab" data-view="earnings"><b>F8</b>EARN</div>
     <div class="tab" data-view="news"><b>F9</b>NEWS</div>
     <div class="tab" data-view="livenews"><b>F10</b>LIVE</div>
+    <!-- F11 and F12 belong to the browser (fullscreen, devtools) and F12
+         cannot be intercepted at all, so these two take Alt instead of
+         renumbering ten bindings people already have in their fingers. -->
+    <div class="tab" data-view="dividends"><b>A+D</b>DIV</div>
+    <div class="tab" data-view="ipos"><b>A+I</b>IPO</div>
     <div class="tab" data-view="help"><b>F1</b>HELP</div>
   </div>
 
@@ -660,6 +707,64 @@ h3.hd{color:var(--amber);letter-spacing:.12em;margin:12px 0 4px}
       <div id="earnWrap"></div>
     </div>
 
+    <div class="view" id="view-dividends">
+      <div id="mapBar">
+        <span class="vtitle">EX-DIVIDEND</span><span class="dim">WINDOW</span>
+        <select id="divDays">
+          <option value="7">7 days</option>
+          <option value="14" selected>14 days</option>
+          <option value="30">30 days</option>
+          <option value="42">42 days</option>
+        </select>
+        <span class="dim">MIN CAP</span>
+        <select id="divCap">
+          <option value="0" selected>Any</option>
+          <option value="1000000000">$1B</option>
+          <option value="10000000000">$10B</option>
+          <option value="50000000000">$50B</option>
+        </select>
+        <span class="dim">·</span>
+        <span class="dim">DROP is this payment against today's price ·
+          PAYOUT over 100% is not funded by earnings</span>
+        <span id="divNote" class="vstatus"></span>
+      </div>
+      <!-- Outside the scroll container, not inside it: six numeric columns
+           with no labels is unreadable, and a header that scrolls away
+           leaves it unreadable for everything below the fold. The day
+           bands inside are sticky and slide under this. -->
+      <div class="erow dhead">
+        <span class="es">SYMBOL</span>
+        <span class="en">COMPANY</span>
+        <span class="dv">AMOUNT</span>
+        <span class="dv">DROP</span>
+        <span class="dv">YIELD</span>
+        <span class="dv">PAYOUT</span>
+        <span class="dd">RECORD</span>
+        <span class="dd">PAY</span>
+        <span class="ec">CHG</span>
+        <span class="ev">LAST</span>
+        <span class="ev">MKT CAP</span>
+      </div>
+      <div id="divWrap"></div>
+    </div>
+
+    <div class="view" id="view-ipos">
+      <div id="mapBar">
+        <span class="vtitle">IPO</span>
+        <span class="ipotabs" id="ipoTabs">
+          <span class="ipotab on" data-bucket="upcoming">UPCOMING</span>
+          <span class="ipotab" data-bucket="priced">PRICED</span>
+          <span class="ipotab" data-bucket="filed">FILED</span>
+          <span class="ipotab" data-bucket="withdrawn">WITHDRAWN</span>
+        </span>
+        <span class="dim">·</span>
+        <span class="dim">a company that has not listed has no price of its
+          own — RANGE is what it is asking</span>
+        <span id="ipoNote" class="vstatus"></span>
+      </div>
+      <div id="ipoWrap"></div>
+    </div>
+
     <!-- market news -->
     <div class="view" id="view-news">
       <div id="mapBar">
@@ -706,7 +811,7 @@ h3.hd{color:var(--amber);letter-spacing:.12em;margin:12px 0 4px}
   <input id="cmdIn" autocomplete="off" spellcheck="false"
          placeholder="ticker, or  screen mcap>10b and chg>3 and relvol>2   —  type help">
   <span id="msg"></span>
-  <span id="keys">F1 HELP · F2 SCRN · F3 HEAT · F4 CHRT · F5 SAVE · F6 WRLD · F7 ADR · F8 EARN · F9 NEWS · F10 LIVE</span>
+  <span id="keys">F1 HELP · F2 SCRN · F3 HEAT · F4 CHRT · F5 SAVE · F6 WRLD · F7 ADR · F8 EARN · F9 NEWS · F10 LIVE · ALT+D DIV · ALT+I IPO</span>
 </div>
 
 <div id="prog"><div id="progBar"></div></div>
@@ -733,6 +838,8 @@ h3.hd{color:var(--amber);letter-spacing:.12em;margin:12px 0 4px}
     <tr><td>refresh</td><td>rebuild the universe snapshot</td></tr>
     <tr><td>scrn / heat / map / chart / adr / saved</td><td>switch view</td></tr>
     <tr><td>earn</td><td>earnings calendar — who reports, and whether before the open or after the close</td></tr>
+    <tr><td>div</td><td>ex-dividend calendar (<b>Alt+D</b>) — the four dates, the drop to expect, and whether earnings cover it</td></tr>
+    <tr><td>ipo [bucket]</td><td>IPO board (<b>Alt+I</b>) — <code>upcoming</code> · <code>priced</code> · <code>filed</code> · <code>withdrawn</code></td></tr>
     <tr><td>news</td><td>market news, ranked by how hot it is</td></tr>
     <tr><td>news SYMBOL</td><td>stories for one company — also shown under its chart</td></tr>
     <tr><td>find SYMBOL</td><td>search tickers and companies</td></tr>
@@ -756,6 +863,10 @@ h3.hd{color:var(--amber);letter-spacing:.12em;margin:12px 0 4px}
     <tr><td>rs &gt; 3</td><td>beating its own sector by 3% — different from "up 3%"</td></tr>
     <tr><td>dvol &gt; 100m</td><td>dollar volume traded today — <code>avgdvol</code> for the normal day</td></tr>
     <tr><td>dayrange &gt; 90</td><td>closing on the high — 0 at the day's low, 100 at its high</td></tr>
+    <tr><td>0 &lt; exdiv &lt; 7</td><td>goes ex within the week — negative means it already has</td></tr>
+    <tr><td>exdiv &lt; 30 and divdrop &gt; 1</td><td>a payment worth more than 1% of the price</td></tr>
+    <tr><td>exdiv &lt; 14 and payout &lt; 75</td><td>going ex, and the dividend is covered by earnings</td></tr>
+    <tr><td>not (0 &lt; exdiv &lt; 7)</td><td>keep a momentum screen clear of a scheduled gap down</td></tr>
   </table>
   <h2>FIELDS</h2>
   <div id="fieldList" class="dim" style="line-height:1.7"></div>
@@ -1921,6 +2032,174 @@ document.getElementById("earnWrap").addEventListener("click", e=>{
 document.getElementById("earnDays").onchange = loadEarnings;
 document.getElementById("earnCap").onchange = loadEarnings;
 
+/* ---------- ex-dividend calendar ---------- */
+S.divs = {days:[]};
+
+/* A date from the server, as an exchange day. These are all timestamps at
+   New York midnight, so rendering them in the viewer's zone would show
+   the previous evening from anywhere west of London and, from India, the
+   day before. The whole board is exchange dates or it is wrong. */
+function edate(ts){
+  if(ts==null) return "—";
+  return new Date(ts*1000).toLocaleDateString("en-US",
+    {timeZone:"America/New_York", month:"short", day:"numeric"});
+}
+
+async function loadDividends(){
+  const days = document.getElementById("divDays").value;
+  const cap  = document.getElementById("divCap").value;
+  const note = document.getElementById("divNote");
+  note.textContent = "loading…";
+  try{
+    const d = await api("/api/dividends?"+new URLSearchParams(
+      {days, min_cap:cap}));
+    S.divs.days = d.days||[];
+    const total = S.divs.days.reduce((a,x)=>a+x.count,0);
+    const cal = d.calendar||{};
+    // The calendar loads on a background thread, so an empty board early
+    // in a session means "not fetched yet", not "nothing goes ex". Those
+    // are different answers and the note says which one this is.
+    note.textContent = total
+      ? `${total} going ex over ${d.window} days`
+      : (cal.refreshing || cal.age==null
+          ? "fetching the dividend calendar…"
+          : `nothing going ex in ${d.window} days`);
+    if(cal.error) note.textContent = "calendar: "+cal.error;
+    drawDividends();
+    saveUi();
+  }catch(e){ note.textContent = "unavailable"; say(e.message, true); }
+}
+
+function drawDividends(){
+  const el = document.getElementById("divWrap");
+  if(!S.divs.days.length){
+    el.innerHTML = `<div class="dim" style="padding:8px 10px">`
+      + `nothing on the board yet — the dividend calendar refreshes in the `
+      + `background and lands within a minute of a cold start</div>`;
+    return;
+  }
+  el.innerHTML = S.divs.days.map(day=>
+    `<div class="eday"><b>${esc(day.weekday)} ${esc(day.date)}</b>`
+    + `<span class="dim">${day.count} going ex</span>`
+    + `<span class="dim">·</span>`
+    + `<span class="dim">avg drop ${nf(day.total_drop,2)}%</span>`
+    + `<span class="dim" style="margin-left:auto">`
+    + `${fcap(day.market_cap)} going ex</span></div>`
+    + day.rows.map(r=>{
+        // Payout is the "can they afford it" column. Over 100% is amber —
+        // common and legitimate for REITs and funds. Negative means the
+        // company lost money, which is a different statement entirely.
+        const p = r.payout_ratio;
+        const pc = p==null ? "" : (p < 0 ? "loss" : (p > 100 ? "over" : ""));
+        return `<div class="erow" data-sym="${esc(r.symbol)}">`
+        + `<span class="es">${esc(r.symbol)}</span>`
+        + `<span class="en">${esc(r.name||"")}</span>`
+        + `<span class="dv" title="cash per share">`
+          + `${r.div_amount==null?"—":nf(r.div_amount,4)}</span>`
+        + `<span class="dv ${cls(-(r.div_drop_pct||0))}" `
+          + `title="this payment against today's price">`
+          + `${r.div_drop_pct==null?"—":nf(r.div_drop_pct,2)+"%"}</span>`
+        + `<span class="dv" title="indicated annual yield">`
+          + `${r.div_yield_upcoming==null?"—":nf(r.div_yield_upcoming,2)+"%"}`
+          + `</span>`
+        + `<span class="dv dp ${pc}" title="payout ratio">`
+          + `${p==null?"—":nf(p,0)+"%"}</span>`
+        + `<span class="dd" title="record date">${edate(r.div_record_ts)}</span>`
+        + `<span class="dd" title="payment date">${edate(r.div_pay_ts)}</span>`
+        + `<span class="ec ${cls(r.change_pct)}">${fpct(r.change_pct)}</span>`
+        + `<span class="ev">${nf(r.price,2)}</span>`
+        + `<span class="ev">${fcap(r.market_cap)}</span>`
+        + `</div>`;
+      }).join("")
+  ).join("");
+}
+
+document.getElementById("divWrap").addEventListener("click", e=>{
+  const row = e.target.closest(".erow");
+  if(row) openTicker(row.dataset.sym);
+});
+document.getElementById("divDays").onchange = loadDividends;
+document.getElementById("divCap").onchange = loadDividends;
+
+/* ---------- IPO board ---------- */
+S.ipo = {bucket:"upcoming", data:{}};
+
+async function loadIpos(){
+  const note = document.getElementById("ipoNote");
+  note.textContent = "loading…";
+  try{
+    const d = await api("/api/ipos");
+    S.ipo.data = d;
+    const cal = d.calendar||{};
+    const n = (d[S.ipo.bucket]||[]).length;
+    note.textContent = n
+      ? `${n} ${S.ipo.bucket}`
+      : (cal.refreshing || cal.age==null
+          ? "fetching the IPO calendar…" : `no ${S.ipo.bucket} deals`);
+    if(d.error) note.textContent = "calendar: "+d.error;
+    drawIpos();
+    saveUi();
+  }catch(e){ note.textContent = "unavailable"; say(e.message, true); }
+}
+
+function drawIpos(){
+  const el = document.getElementById("ipoWrap");
+  const rows = S.ipo.data[S.ipo.bucket] || [];
+  const priced = S.ipo.bucket === "priced";
+  const dateLabel = {upcoming:"EXPECTED", priced:"PRICED",
+                     filed:"FILED", withdrawn:"WITHDRAWN"}[S.ipo.bucket];
+  if(!rows.length){
+    el.innerHTML = `<div class="dim" style="padding:8px 10px">`
+      + `nothing in this bucket right now</div>`;
+    return;
+  }
+  el.innerHTML =
+    // Carries `irow` as well as `ihead`: the column widths are scoped to
+    // `.irow`, so a header that is not one collapses every label into a
+    // run of words at the left margin.
+    `<div class="irow ihead"><span class="is">SYMBOL</span>`
+    + `<span class="inm">COMPANY</span>`
+    + `<span class="ix">EXCHANGE</span>`
+    + `<span class="iv">${priced?"PRICE":"RANGE"}</span>`
+    + `<span class="iv">SHARES</span>`
+    + `<span class="iv">OFFER</span>`
+    + `<span class="id8">${dateLabel}</span></div>`
+    + rows.map(r=>{
+        const range = r.price_low==null ? "—"
+          : (r.price_high!=null && r.price_high!==r.price_low
+              ? `${nf(r.price_low,2)}–${nf(r.price_high,2)}`
+              : nf(r.price_low,2));
+        return `<div class="irow${r.listed?" click":""}" `
+          + `data-sym="${esc(r.symbol||"")}" data-listed="${r.listed?1:0}">`
+          + `<span class="is${r.listed?"":" unlisted"}">`
+            + `${esc(r.symbol||"—")}</span>`
+          + `<span class="inm">${esc(r.name||"")}</span>`
+          + `<span class="ix">${esc(r.exchange||"—")}</span>`
+          + `<span class="iv">${range}</span>`
+          + `<span class="iv">${r.shares==null?"—":fvol(r.shares)}</span>`
+          + `<span class="iv">${r.value==null?"—":fcap(r.value)}</span>`
+          + `<span class="id8">${edate(r.date_ts)}</span>`
+          + `</div>`;
+      }).join("");
+}
+
+document.getElementById("ipoWrap").addEventListener("click", e=>{
+  const row = e.target.closest(".irow.click");
+  if(row && row.dataset.sym) openTicker(row.dataset.sym);
+});
+document.getElementById("ipoTabs").addEventListener("click", e=>{
+  const tab = e.target.closest(".ipotab");
+  if(!tab) return;
+  S.ipo.bucket = tab.dataset.bucket;
+  document.querySelectorAll("#ipoTabs .ipotab").forEach(t=>
+    t.classList.toggle("on", t.dataset.bucket===S.ipo.bucket));
+  const n = (S.ipo.data[S.ipo.bucket]||[]).length;
+  document.getElementById("ipoNote").textContent =
+    n ? `${n} ${S.ipo.bucket}` : `no ${S.ipo.bucket} deals`;
+  drawIpos();
+  saveUi();
+});
+
 /* ---------- screen diffs ---------- */
 S.diffs = {};
 
@@ -3023,6 +3302,11 @@ function setView(v){
     if(v==="world" && !S.world.rows.length) loadWorld();
     if(v==="adr" && !S.adr.rows.length) loadAdr();
     if(v==="earnings" && !S.earn.days.length) loadEarnings();
+    // Both calendars refresh on a background thread, so an empty board is
+    // "not fetched yet" as often as it is "nothing scheduled" — reloading
+    // on every visit is what makes a cold start fill itself in.
+    if(v==="dividends" && !S.divs.days.length) loadDividends();
+    if(v==="ipos" && !Object.keys(S.ipo.data).length) loadIpos();
     if(v==="news" && !S.mkt.items.length) loadMarketNews();
     if(v==="livenews" && !S.livenews.loaded) loadLiveNews();
     if(v==="saved") loadSaved();
@@ -3172,6 +3456,19 @@ async function runCommand(raw){
   if(cmd==="heat"||cmd==="heatmap"){ setView("map"); loadMap(); return; }
   if(["map","world","globe"].includes(cmd)){ setView("world"); loadWorld(); return; }
   if(cmd==="adr"||cmd==="adrs"){ setView("adr"); loadAdr(); return; }
+  if(["div","divs","dividend","dividends","exdiv"].includes(cmd)){
+    setView("dividends"); loadDividends(); return;
+  }
+  if(["ipo","ipos","listings"].includes(cmd)){
+    // `ipo priced` jumps straight to a bucket, the way `news NVDA` does.
+    const b = (arg||"").trim().toLowerCase();
+    if(["upcoming","priced","filed","withdrawn"].includes(b)){
+      S.ipo.bucket = b;
+      document.querySelectorAll("#ipoTabs .ipotab").forEach(t=>
+        t.classList.toggle("on", t.dataset.bucket===b));
+    }
+    setView("ipos"); loadIpos(); return;
+  }
   if(["earn","earnings","cal","calendar"].includes(cmd)){
     setView("earnings"); loadEarnings(); return;
   }
@@ -3271,6 +3568,14 @@ document.addEventListener("keydown", e=>{
   const keys = {F1:"help", F2:"screen", F3:"map", F4:"ticker", F5:"saved",
                 F6:"world", F7:"adr", F8:"earnings", F9:"news", F10:"livenews"};
   if(keys[e.key]){ e.preventDefault(); setView(keys[e.key]); return; }
+  // F11 is the browser's fullscreen and F12 its devtools — the second
+  // cannot be intercepted at all — so the eleventh and twelfth views take
+  // Alt rather than renumbering ten bindings people already know. Checked
+  // before the input guard so they work from the command line too.
+  if(e.altKey && !e.ctrlKey && !e.metaKey){
+    const alt = {d:"dividends", i:"ipos"}[(e.key||"").toLowerCase()];
+    if(alt){ e.preventDefault(); setView(alt); return; }
+  }
   const tag = (e.target.tagName||"").toUpperCase();
   if(tag==="INPUT"||tag==="SELECT"||tag==="TEXTAREA") return;
   // Grid navigation gets first refusal on the arrow keys, so the terminal

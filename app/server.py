@@ -29,6 +29,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 from . import (
     article,
+    calendars,
     clock,
     diffs,
     livenews,
@@ -745,6 +746,10 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(diffs.all_screens())
             elif path == "/api/earnings":
                 self._earnings(params)
+            elif path == "/api/dividends":
+                self._dividends(params)
+            elif path == "/api/ipos":
+                self._ipos(params)
             elif path == "/api/screens":
                 self._json({"screens": store.list_screens()})
             elif path.startswith("/api/ticker/"):
@@ -1116,6 +1121,88 @@ class Handler(BaseHTTPRequestHandler):
                for key, items in sorted(buckets.items())]
         self._json({"days": out, "total": total, "window": days,
                     "as_of": time.time()})
+
+    def _dividends(self, params: dict):
+        """What goes ex, grouped by exchange day.
+
+        Read off the screener frame rather than straight from Nasdaq's
+        calendar, which is the whole point of joining the two: the
+        calendar knows four dates and a company name, and the frame knows
+        the price the drop will come out of, the yield, and whether this
+        year's earnings actually cover the payment.
+
+        Grouped in New York time for the same reason earnings are — an
+        ex-date is an exchange day, and from India bucketing by local date
+        scatters one across two.
+        """
+        df = self._frame()
+        if df is None:
+            self._json({"days": [], "empty": True})
+            return
+        days = max(1, min(int(self._one(params, "days", "14") or 14), 42))
+        min_cap = float(self._one(params, "min_cap", "0") or 0)
+
+        # Includes yesterday: a stock that went ex this morning is still
+        # the most relevant row on the board to anyone holding it.
+        expr = f"-1 < exdiv < {days}"
+        if min_cap:
+            expr += f" and mcap > {min_cap}"
+        hits, total = screen.run(df, expr, sort="market_cap", descending=True,
+                                 limit=1500)
+        rows = screen.to_records(hits, [
+            "symbol", "name", "sector", "price", "change_pct", "market_cap",
+            "volume", "dividend_yield", "payout_ratio",
+            "ex_div_ts", "div_record_ts", "div_pay_ts", "div_declared_ts",
+            "div_amount", "div_annual_amount", "ex_div_days",
+            "div_drop_pct", "div_yield_upcoming"])
+
+        buckets: dict[str, list] = {}
+        for row in rows:
+            ts = row.get("ex_div_ts")
+            if not ts:
+                continue
+            key = datetime.fromtimestamp(ts, clock.EASTERN).strftime("%Y-%m-%d")
+            buckets.setdefault(key, []).append(row)
+        out = [{"date": key,
+                "weekday": datetime.strptime(key, "%Y-%m-%d").strftime("%a"),
+                "count": len(items),
+                "market_cap": sum(i.get("market_cap") or 0 for i in items),
+                # What a day of ex-dividends is worth in cash, across the
+                # names on it. The one figure that says whether a date
+                # matters to the tape or is a handful of small payers.
+                "total_drop": sum((i.get("div_drop_pct") or 0)
+                                  for i in items) / max(len(items), 1),
+                "rows": items}
+               for key, items in sorted(buckets.items())]
+        self._json({"days": out, "total": total, "window": days,
+                    "calendar": calendars.status()["dividends"],
+                    "as_of": time.time()})
+
+    def _ipos(self, params: dict):
+        """The IPO board: upcoming, priced, filed, withdrawn.
+
+        Kept entirely separate from the universe, unlike dividends. A
+        company that has not listed yet has no price, no volume and no
+        market cap, so it cannot be a screener row without inventing three
+        — and the screener's contract is that every row is a tradeable
+        line. What it does carry is the deal: the range it filed, how many
+        shares, and what that comes to.
+        """
+        board = calendars.ipo_board()
+        which = (self._one(params, "bucket", "") or "").strip().lower()
+        if which and which in board:
+            board = {which: board[which], "as_of": board["as_of"],
+                     "stale": board["stale"], "error": board["error"]}
+        board["calendar"] = calendars.status()["ipos"]
+        # Which of these already trade, so the UI can link them through to
+        # a chart rather than offering a dead click on a company that has
+        # not listed.
+        df = self._frame()
+        listed = set(df["symbol"]) if df is not None and not df.empty else set()
+        for key in ("upcoming", "priced", "filed", "withdrawn"):
+            for row in board.get(key) or []:
+                row["listed"] = row.get("symbol") in listed
+        self._json(board)
 
     def _livenews(self, params: dict):
         """Which finance networks are on air, and the tickers the current

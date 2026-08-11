@@ -39,7 +39,20 @@ DERIVED = ["rel_volume", "rel_volume_raw", "rel_volume_10d", "session_fraction",
            "dollar_volume", "avg_dollar_volume", "day_range_pct", "gap_pct",
            "true_range", "atr_pct", "sma_spread", "intraday_pct",
            "earnings_yield", "eps_growth", "payout_ratio"]
-COLUMNS = [n for n, _ in store.UNIVERSE_COLUMNS] + DERIVED
+
+# Joined onto the frame from the corporate calendar (app/calendars.py)
+# rather than read from the snapshot, plus what derive() computes from
+# them. Listed separately from DERIVED because they are a different kind
+# of fact with a different failure mode: these are null until the
+# calendar's first background refresh lands, and null again for any
+# company with nothing scheduled inside its window. Neither is "pays no
+# dividend", and no default may be substituted for either.
+CALENDAR = ["ex_div_ts", "div_record_ts", "div_pay_ts", "div_declared_ts",
+            "div_amount", "div_annual_amount",
+            "ex_div_days", "div_record_days", "div_pay_days",
+            "div_drop_pct", "div_yield_upcoming", "ipo_age_years"]
+
+COLUMNS = [n for n, _ in store.UNIVERSE_COLUMNS] + DERIVED + CALENDAR
 
 TEXT_COLUMNS = {"symbol", "name", "sector", "industry", "country",
                 "exchange", "quote_type", "currency", "market_state",
@@ -65,6 +78,11 @@ LIVE_COLUMNS = {
     "rel_volume_10d",
     # Built from today's high/low, which only widen as the session runs.
     "true_range", "atr_pct",
+    # The dividend against today's price. The payment is fixed weeks in
+    # advance and the price is not, so these two move for exactly the same
+    # reason `pct_from_sma50` does — and the whole point of asking is the
+    # size of the drop relative to where the stock is *now*.
+    "div_drop_pct", "div_yield_upcoming",
 }
 
 # Fields safe to narrow with *before* re-pricing. The distinction is not
@@ -109,6 +127,16 @@ STATIC_SAFE = {
     # `volume` is — it only rises, so a stale value drops the very names
     # that have since crossed the threshold.
     "avg_dollar_volume",
+    # The corporate calendar. A declared dividend's four dates and its
+    # amount are fixed the moment it is announced and do not move again,
+    # so they are the most static fields here — safe to narrow on before
+    # anything is re-priced. The day counts are recomputed against the
+    # clock on every load, not carried in the snapshot, so they cannot go
+    # stale the way a stored figure would.
+    "ex_div_ts", "div_record_ts", "div_pay_ts", "div_declared_ts",
+    "div_amount", "div_annual_amount",
+    "ex_div_days", "div_record_days", "div_pay_days",
+    "ipo_age_years",
 }
 
 # Short names, because nobody wants to type pct_from_52w_high at a prompt.
@@ -157,6 +185,25 @@ ALIASES = {
     "when": "earnings_when", "earningswhen": "earnings_when",
     "rs": "rs_sector", "vssector": "rs_sector",
     "sectorchg": "sector_change_pct",
+    # The dividend calendar. `exdiv` is the one people reach for — days
+    # until the stock trades without its next payment — so it gets the
+    # shortest name, and the raw timestamps sit behind `*date` spellings
+    # for anyone who wants to sort or bracket by the date itself.
+    "exdiv": "ex_div_days", "exdivdays": "ex_div_days",
+    "daystoex": "ex_div_days", "exdate": "ex_div_ts",
+    "recorddate": "div_record_ts", "recorddays": "div_record_days",
+    "paydate": "div_pay_ts", "paydays": "div_pay_days",
+    "declared": "div_declared_ts", "declareddate": "div_declared_ts",
+    # The payment itself, and the two ways of sizing it. `divamt` is the
+    # cash per share; `divdrop` is that as a percent of today's price —
+    # the size of the gap to expect on the ex-date. Deliberately not
+    # `div`, which is already the trailing annual yield: two numbers that
+    # differ by a factor of four are worth two names.
+    "divamt": "div_amount", "divamount": "div_amount",
+    "divdrop": "div_drop_pct", "exdrop": "div_drop_pct",
+    "divannual": "div_annual_amount", "annualdiv": "div_annual_amount",
+    "fwdyield": "div_yield_upcoming", "divyieldfwd": "div_yield_upcoming",
+    "ipoage": "ipo_age_years", "yearslisted": "ipo_age_years",
 }
 
 # Bare words that read as values, not columns.
@@ -582,6 +629,22 @@ FILTER_SPECS = [
     ("div", "Dividend", [
         ("Any", ""), ("Pays", "div > 0"), ("Over 2%", "div > 2"),
         ("Over 4%", "div > 4"), ("None", "div == 0 or div != div")]),
+    ("exdiv", "Ex-Dividend", [
+        ("Any", ""),
+        ("Goes ex today", "-1 < exdiv < 1"),
+        ("Next 3 days", "0 < exdiv < 3"),
+        ("Next 7 days", "0 < exdiv < 7"),
+        ("Next 30 days", "0 < exdiv < 30"),
+        ("Went ex last 7d", "-7 < exdiv < 0"),
+        # Capture screens want the payment to be worth the trade and the
+        # company to be able to afford it. A payout over 100% is a
+        # dividend funded from somewhere other than this year's earnings.
+        ("Drop over 1%", "0 < exdiv < 30 and divdrop > 1"),
+        ("Covered — payout under 75%", "0 < exdiv < 30 and 0 < payout < 75"),
+        # The mirror of the earnings avoidance filter, and needed for the
+        # same reason: an ex-date is a scheduled gap down, so a momentum
+        # screen that does not exclude it is measuring the dividend.
+        ("Avoid — none within 7d", "not (0 < exdiv < 7)")]),
     ("earnings", "Earnings", [
         ("Any", ""), ("Today", "-1 < earnings < 1"),
         ("Next 3 days", "0 < earnings < 3"),

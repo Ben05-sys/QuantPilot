@@ -69,6 +69,11 @@ jobs:
         run: python tests/test_diffs.py
       - name: options
         run: python tests/test_options.py
+      # The dividend and IPO calendars, against pasted Nasdaq payloads —
+      # the dates in them are fixed, so this asserts the same thing on a
+      # runner in any timezone.
+      - name: calendars
+        run: python tests/test_calendars.py
       # Also offline: the channel probe runs against a stubbed fetch, which
       # is the only way to assert on "who is on air" without the answer
       # changing under the test.

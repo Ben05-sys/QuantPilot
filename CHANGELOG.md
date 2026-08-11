@@ -12,6 +12,34 @@ saved screen will be called out here under **Changed** rather than buried.
 
 ### Added
 
+- **An ex-dividend calendar** (`Alt+D`, or `div`). What goes ex over the
+  next six weeks, grouped by exchange day, carrying all four dates a
+  dividend has — declared, ex, record and payment — plus the cash amount,
+  that amount as a percent of today's price, the indicated annual yield
+  and the payout ratio.
+- **An IPO board** (`Alt+I`, or `ipo`), split into upcoming, priced, filed
+  and withdrawn, with the range a deal is asking, the share count and the
+  offer size. Deliberately not part of the screener: a company that has
+  not listed has no price, no volume and no market cap, and every screener
+  row is supposed to be a line you can trade. The ones that have listed
+  link through to the chart.
+- **Both calendars are part of the expression language**, which is the
+  point of joining them to the universe rather than serving them as two
+  more read-only tables. `exdiv` is days until the stock trades without
+  its next payment, negative once it has, alongside `divamt`, `divdrop`,
+  `fwdyield`, `exdate`, `recorddate`, `paydate` and `ipoage`. So
+  `0 < exdiv < 7 and payout < 75` is a screen, and so is
+  `not (0 < exdiv < 7)` — an ex-date is a scheduled gap down, and a
+  momentum screen that does not exclude one is partly measuring dividends.
+  A new **Ex-Dividend** dropdown compiles to the same expressions.
+- A fourth clock, in `app/calendars.py`. The dividend calendar is one call
+  per exchange day against a host limited to two a second, so a six-week
+  window costs about twenty seconds — more than a whole universe rebuild,
+  for data that changes once a day. It refreshes on a background thread
+  and the screener joins whatever is known; before the first refresh every
+  dividend column is null, which is not the same fact as "pays nothing"
+  and renders as an em dash.
+
 - **A demo anyone can open**, at
   [ben05-sys.github.io/QuantPilot](https://ben05-sys.github.io/QuantPilot/).
   `app/web/index.html` verbatim, with the network replaced by fixtures
@@ -44,6 +72,10 @@ saved screen will be called out here under **Changed** rather than buried.
 
 ### Fixed
 
+- **A special dividend no longer reports a yield of zero.** Nasdaq returns
+  an indicated annual of `0` for an irregular payment, and dividing that
+  by the price rendered a stock paying five cents this week as yielding
+  0.00%. It is null now — the payment is real and simply not annualisable.
 - **Volume, relative volume and the day's range now move with the price.**
   Yahoo puts the running session totals on every print and the tick handler
   kept four fields out of thirteen, so while the stream was up those

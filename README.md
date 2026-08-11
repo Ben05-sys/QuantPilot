@@ -121,6 +121,20 @@ always the regular close; an overnight print is a different fact about a
 different session, and letting it overwrite `LAST` is how a terminal ends
 up quietly showing one venue's price under another's label.
 
+**Ex-dividend calendar** (`Alt+D`) — what goes ex over the next six weeks,
+grouped by exchange day, with all four dates a dividend has: declared, ex,
+record and payment. Each row also carries the cash amount, that amount as
+a percent of today's price (the drop to expect), the indicated annual
+yield, and the payout ratio — because "pays 6%" and "pays 6% it is not
+earning" are different stocks.
+
+**IPO board** (`Alt+I`) — upcoming, priced, filed and withdrawn, with the
+range a deal is asking, how many shares, and what that comes to. Kept out
+of the screener deliberately: a company that has not listed has no price,
+no volume and no market cap, and the screener's contract is that every row
+is a line you can actually trade. Symbols that *have* listed are live
+links through to the chart; the rest are dimmed.
+
 **World map** (`F6`) — 60 countries sized by market cap and coloured by
 average change, as geographic bubbles or as equal tiles. Click a country
 to screen it.
@@ -229,8 +243,20 @@ mcap > 10b and chg > 3 and relvol > 2
 sector == "Energy" and div > 3
 sector in ("Technology", "Finance") and from52high > -5
 "semi" in industry and vol > 1m
+0 < exdiv < 7 and payout < 75 and mcap > 10b
+not (0 < exdiv < 7) and relvol > 2
 ```
 
+- The corporate calendar is part of the language, not a separate screen.
+  `exdiv` is days until a stock trades without its next dividend — negative
+  once it has — alongside `divamt`, `divdrop` (that payment as a percent of
+  today's price), `fwdyield`, `exdate`, `recorddate` and `paydate`. An
+  ex-date is a *scheduled gap down*, so the last example above is the one
+  worth stealing: a momentum screen that does not exclude it is partly
+  measuring dividends.
+- A name with nothing scheduled is **null**, never zero — "no dividend in
+  the next six weeks" and "pays no dividend" are different facts and only
+  one of them is a reason to skip a stock.
 - Suffixes `k m b t` work anywhere a number does; `3%` is the same as `3`.
 - `relvol` is **time-adjusted**: volume so far against what a normal
   session would have traded *by now*, not against the whole day. Without
@@ -260,6 +286,8 @@ Field names, aliases and all of it: press `F1`.
 | Source | What it gives | Cost | Freshness |
 |---|---|---|---|
 | Nasdaq screener | 7,000+ symbols with sector, industry, market cap | free, no key | one call, ~2.3s |
+| Nasdaq dividend calendar | declared / ex / record / payment dates, market-wide | free, no key | one call **per exchange day** |
+| Nasdaq IPO calendar | upcoming · priced · filed · withdrawn | free, no key | one call per month |
 | Yahoo `/v7/quote` | 83 fields per symbol, 200 per call | free, no key | near-real-time; needs a cookie+crumb pair |
 | Yahoo websocket | streaming trades, incl. extended hours | free, no key | **sub-second**, but Yahoo throttles |
 | Yahoo `/v8/chart` | OHLCV bars, any interval | free, no key | 3–25s behind the tape |
@@ -332,6 +360,15 @@ session totals Yahoo was already sending, so volume, relative volume and
 the day's range move with the price instead of sitting at whatever the last
 snapshot recorded.
 
+5. **The corporate calendar** — a fourth clock, moving in days rather than
+   minutes or seconds. The dividend calendar is a call *per exchange day*
+   against a host rate-limited to two a second, so a six-week window is
+   about twenty seconds — half again the cost of a whole universe rebuild,
+   for data that changes once a day. It refreshes on its own schedule on a
+   background thread and the screener joins whatever is currently known.
+   Before the first refresh lands every dividend column is null, which
+   renders as an em dash and not as "no dividend".
+
 Snapshots are **append-only**, keyed by timestamp. Every refresh writes a new
 generation instead of overwriting the last. That costs a few MB a day and buys
 two things that are otherwise expensive: screen-membership diffs ("what
@@ -353,6 +390,7 @@ app/
   store.py            SQLite: snapshots, screens, bars, positions
   universe.py         Nasdaq list + Yahoo enrichment -> snapshot -> pandas
   screen.py           expression engine, filter specs, presets, live overlay
+  calendars.py        dividend + IPO calendars, refreshed off the hot path
   stream.py           Yahoo websocket: viewport + pinned subscriptions
   clock.py            market-state scheduler and rolling re-quote
   diffs.py            screen membership, run over run
@@ -405,6 +443,7 @@ python tests/test_screen.py    # expression engine, ADRs, country grouping
 python tests/test_store.py     # snapshots, screens, positions (temp database)
 python tests/test_stream.py    # subscriptions, overlay, backoff
 python tests/test_options.py   # chain shaping, unusual activity
+python tests/test_calendars.py # dividend + IPO parsing, against pasted payloads
 python tests/test_clock.py     # session transitions, replayed in milliseconds
 python tests/test_server.py    # every route, on an ephemeral port
 python tests/test_article.py   # the reader's address check, every hop of it
