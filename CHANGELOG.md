@@ -10,7 +10,60 @@ saved screen will be called out here under **Changed** rather than buried.
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **A demo anyone can open**, at
+  [ben05-sys.github.io/QuantPilot](https://ben05-sys.github.io/QuantPilot/).
+  `app/web/index.html` verbatim, with the network replaced by fixtures
+  captured from a real server and a couple of minutes of the real tape
+  replaying underneath. Sorting, the command line, the heatmap, the world
+  map and the charts all work. Built locally by `tools/build_demo.py` and
+  committed; the workflow only copies it, and the page makes no request to
+  anyone when you open it.
+- **The `STREAM` badge states the delay it is measuring** — the median gap
+  between the venue's timestamp and the print arriving, over the last two
+  hundred prints, rather than a green light that means "a socket is open".
+
+### Changed
+
+- **Ticks flush to the browser on arrival.** There was a flat
+  `sleep(0.7)` between the socket and the event stream, so every price on
+  screen was held back by up to 700ms with the number already in hand —
+  about a fifth of the total delay. Measured over a regular session, what
+  the terminal adds went from ~350ms on average to a median of 2ms, with a
+  worst case of 51ms. Yahoo's own 2.9s is unchanged and is not ours to fix.
+- **The market-state probe runs on its own thread.** It costs an upstream
+  round trip and whichever thread found the cache expired paid for it,
+  which meant one batch of prices every five seconds left a quarter of a
+  second late.
+- **Visible rows are polled against a 2s cache rather than a 10s one**, and
+  the poll now runs at 3s. The single cache TTL was tuned for bulk
+  screening, so every second poll of the rows on screen was answered from
+  cache and the fallback ran at half its advertised rate. Bulk screening
+  keeps the longer TTL — it costs ten upstream chunks, not one.
+
+### Fixed
+
+- **Volume, relative volume and the day's range now move with the price.**
+  Yahoo puts the running session totals on every print and the tick handler
+  kept four fields out of thirteen, so while the stream was up those
+  columns sat frozen at whatever the last snapshot recorded.
+- **A print is assigned to its own session, not to SPY's.** The venue's
+  `marketState` is one global answer sampled from one symbol, and it was
+  wrong at both edges: a regular-session trade reported after the bell was
+  filed as extended-hours, and an overnight ATS print could overwrite
+  `LAST` whenever the clock still said `REGULAR`.
+- **A cached tick no longer outranks a newer quote.** Prints are kept for
+  fifteen minutes because for a thin name the last trade really is the
+  price — but that cached tick was overwriting a quote fetched a moment
+  ago, so a row could report a quarter-hour-old price while the header
+  honestly read `LAG 2s`. Whichever of the two the venue timestamps say is
+  later now wins.
+- **Rows the stream has gone quiet on are polled again.** The poll stopped
+  entirely while the socket was healthy, which is only an argument about
+  the *feed*: outside the most active few hundred names a stock can go
+  minutes between trades, and those rows sat at their snapshot price for as
+  long as you looked at them, under a badge reporting the feed as live.
 
 ## [0.1.1] — 2026-08-01
 

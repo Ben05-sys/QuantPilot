@@ -835,6 +835,8 @@ const S = {
   symbol:null, range:"1y", interval:"1d", ticker:null,
   status:{}, tickTimer:null, history:[], hpos:-1, cells:[], mapRects:[],
   stream:{available:false, healthy:false, connected:false, subscribed:0},
+  // symbol -> when this row last got a price, by stream or by poll.
+  tickAt:{},
 };
 
 /* ---------- grid layout ---------- */
@@ -1215,6 +1217,7 @@ function syncSubscription(){
 function applyTicks(quotes){
   if(S.view!=="screen" || !S.rows.length) return;
   const [from,to] = visibleRange();
+  const now = Date.now();
   let moved = false;
   for(let i=from;i<to;i++){
     const r = S.rows[i]; if(!r) continue;
@@ -1234,13 +1237,21 @@ function applyTicks(quotes){
     if(q.volume!=null) r.volume = q.volume;
     if(q.ext_change_pct!==undefined && q.ext_change_pct!==null)
       r.ext_change_pct = q.ext_change_pct;
-    // The day's extremes are snapshot values; a print through one of them
-    // *is* the new extreme, and leaving them stale would peg the range bar
-    // at 100% and understate the day's width.
+    // Every print now carries the running session totals, so take the
+    // day's extremes from the venue when it states them.
+    if(has(q.day_high)) r.day_high = q.day_high;
+    if(has(q.day_low))  r.day_low  = q.day_low;
+    // Only widen from the price when it did not. A print through one of
+    // them *is* the new extreme, and leaving them stale would peg the
+    // range bar at 100% and understate the day's width.
     if(has(q.price)){
       if(has(r.day_high)) r.day_high = Math.max(r.day_high, q.price);
       if(has(r.day_low))  r.day_low  = Math.min(r.day_low,  q.price);
     }
+    // When this row last heard anything, by any route. A healthy stream
+    // only proves the *feed* is alive; a row nobody is trading gets no
+    // prints at all, and the poll below is what keeps it honest.
+    S.tickAt[r.symbol] = now;
   }
   if(moved) repaintWindow(from,to);
   // Volume creeps up without the price moving, and that is the whole point
@@ -1250,13 +1261,26 @@ function applyTicks(quotes){
   if(shown>=from && shown<to) paintStrip();
 }
 
-/* Polling fallback. Only runs when the stream is not healthy — a grid
-   that has silently stopped updating while still labelled LIVE is worse
-   than one that admits it is polling. */
+/* Polling. Covers the whole viewport when the stream is not healthy — a
+   grid that has silently stopped updating while still labelled LIVE is
+   worse than one that admits it is polling.
+
+   It also keeps running *while* the stream is healthy, over the rows the
+   stream has said nothing about. A healthy socket means prints are
+   arriving, not that they are arriving for everything on screen: outside
+   the few hundred most active names a stock can go minutes between
+   trades, and those rows used to sit at their snapshot price for as long
+   as you looked at them, under a badge reporting the feed as live. The
+   feed was. The row was not. */
+const QUIET_ROW_MS = 30000;
+
 async function tickNow(){
   if(S.view!=="screen" || !S.rows.length) return;
-  if(S.stream && S.stream.healthy) return;
-  const syms = visibleSymbols();
+  let syms = visibleSymbols();
+  if(S.stream && S.stream.healthy){
+    const cutoff = Date.now() - QUIET_ROW_MS;
+    syms = syms.filter(s => !(S.tickAt[s] > cutoff));
+  }
   if(!syms.length) return;
   try{
     const d = await api("/api/quotes?symbols="+encodeURIComponent(syms.join(",")));
@@ -3047,8 +3071,17 @@ function paintStatus(s){
   const sb2 = document.getElementById("streamBadge");
   if(!st.available){ sb2.textContent = "POLL"; sb2.className = "badge"; }
   else if(st.healthy){
-    sb2.textContent = `STREAM ${st.subscribed||0}`;
-    sb2.className = "badge live";
+    // The delay is Yahoo's, measured here from the venue's own timestamp
+    // on each print — around three seconds, and shown rather than implied
+    // away. STREAM without a number would read as instant.
+    const l = st.latency;
+    sb2.textContent = `STREAM ${st.subscribed||0}`
+      + (l!=null ? ` · ${l<10 ? l.toFixed(1) : l.toFixed(0)}s` : "");
+    sb2.className = "badge " + (l==null || l<10 ? "live" : "delayed");
+    sb2.title = l!=null
+      ? `${st.subscribed||0} symbols · median ${l.toFixed(1)}s behind the `
+        + `venue timestamp over the last ${st.samples||0} prints`
+      : `${st.subscribed||0} symbols subscribed`;
   } else if(st.connected){
     sb2.textContent = "STREAM QUIET"; sb2.className = "badge delayed";
   } else {
@@ -3081,7 +3114,7 @@ function paintStatus(s){
     if(s.progress&&s.progress.message) say("refresh: "+s.progress.message);
   }
   if(s.error) say(s.error, true);
-  scheduleTick(s.tick_seconds||5);
+  scheduleTick(s.tick_seconds||3);
 }
 
 function scheduleTick(sec){

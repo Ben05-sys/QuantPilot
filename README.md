@@ -5,10 +5,21 @@
 [![python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/downloads/)
 [![platforms](https://img.shields.io/badge/platforms-Linux%20%C2%B7%20macOS%20%C2%B7%20Windows-lightgrey)](#install)
 [![licence](https://img.shields.io/badge/licence-AGPL--3.0-green)](LICENSE)
+[![demo](https://img.shields.io/badge/demo-open%20in%20browser-ffb000)](https://ben05-sys.github.io/QuantPilot/)
 
 A local market terminal: Finviz-class screening over the whole US universe,
 the finance networks live beside the tape, Bloomberg-style chrome, no API
 keys, no vendor, no monthly bill.
+
+### [Open the demo →](https://ben05-sys.github.io/QuantPilot/)
+
+The real terminal with its network swapped for a recording: a captured
+session of the US market and a couple of minutes of the actual tape,
+replaying. Sorting, the command line, the heatmap, the world map and the
+charts all work — it is `app/web/index.html` unmodified, so what you are
+clicking is the thing itself. Prices are from the moment it was recorded
+and the page says so at the top; nothing there is live, and nothing there
+calls out to a data provider from your browser. For that, run it:
 
 ```bash
 pip install -r requirements.txt && python pilot.py
@@ -296,6 +307,31 @@ Three clocks, deliberately separate:
    place. It never re-screens: a row that stops matching mid-session stays
    put, which is what you want when you're watching something move.
 
+### How far behind the tape you actually are
+
+Measured, on the machine this was written on, during a regular session:
+
+| | |
+|---|---|
+| Yahoo's feed — venue timestamp to our socket | median **2.9s**, p90 3.9s |
+| The terminal — socket to the browser | median **2ms**, worst case 51ms |
+
+The first number is not ours to improve and the header states it rather
+than implying it away: the `STREAM` badge carries the median measured over
+the last two hundred prints, so what you see is `STREAM 40 · 2.9s`, not a
+green light. The second one *is* ours, and it used to be a flat 0.7-second
+sleep between the socket and the browser — a fifth of the total delay,
+spent waiting for a timer with the price already in hand. Ticks now flush
+on arrival and only coalesce under a burst.
+
+Two smaller things in the same direction. The market-state probe refreshes
+on its own thread, because it costs a round trip and whichever thread found
+the cache expired used to pay for it — one batch of prices every five
+seconds left a quarter of a second late. And every print now carries the
+session totals Yahoo was already sending, so volume, relative volume and
+the day's range move with the price instead of sitting at whatever the last
+snapshot recorded.
+
 Snapshots are **append-only**, keyed by timestamp. Every refresh writes a new
 generation instead of overwriting the last. That costs a few MB a day and buys
 two things that are otherwise expensive: screen-membership diffs ("what
@@ -330,11 +366,37 @@ app/
   web/index.html      the entire terminal, self-contained
   providers/          nasdaq · yahoo · cboe · sec, behind one Protocol
 tools/make_icon.py    generates the .ico with the stdlib alone
+tools/build_demo.py   freezes a running terminal into docs/demo/
+tools/demo_shim.js    the recording that stands in for the server
+docs/demo/            what GitHub Pages serves — a build artifact
 tests/                plain scripts, no pytest (plus one jsdom smoke test)
 ```
 
 Data lives in `~/.quantpilot/` (`market.db`, `httpcache.db`, `config.json`).
 Nothing is written inside the repo.
+
+### The demo
+
+`docs/demo/` is generated, and generated **locally** — during US market
+hours, on the machine of whoever is refreshing it:
+
+```bash
+python pilot.py --refresh
+python tools/build_demo.py --seconds 120
+```
+
+That boots the real server on an ephemeral port, captures its answers as
+fixtures, records a couple of minutes of the real tape off the websocket,
+and writes the whole thing beside `app/web/index.html` — copied verbatim,
+so the page on Pages is the page you run. `demo_shim.js` replaces
+`window.fetch` and `EventSource`: it answers from the fixtures, screens
+and sorts the rows in the browser against the engine's own alias table,
+and replays the recorded prints at the intervals they actually arrived.
+
+`window.fetch` is *replaced*, not wrapped. A fixture that is missing fails
+visibly rather than falling through to Yahoo from a stranger's browser —
+which is also why the workflow only ever copies the committed folder and
+never builds it on a runner. See the caveat at the bottom.
 
 ## Tests
 
@@ -444,3 +506,9 @@ monetization. That is fine for a single-user terminal on your own machine, and
 **not** fine as the basis of anything published or sold. Every upstream sits
 behind `providers.base.QuoteProvider`, so the day one of them closes — or the
 day this needs to be legitimate — only one file changes.
+
+That line is also where the demo stops. It is a recording — one session,
+captured once, by hand, and committed — and it makes no request to anyone
+when you open it. A live hosted terminal would be a data service built on
+someone else's feed, which is the thing the paragraph above rules out. The
+live feed is for the copy running on your own machine.
