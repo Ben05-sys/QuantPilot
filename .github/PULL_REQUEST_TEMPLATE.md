@@ -14,6 +14,16 @@ Which suites you ran, and what you looked at in the terminal. If it touches
 the UI, say what you clicked.
 -->
 
+## Licence
+
+First pull request? Sign the [CLA](../CLA.md) by copying this line in, with
+your own name and today's date. One signature covers everything you send
+afterwards, and you keep the copyright in your work.
+
+```
+I have read CLA.md and I agree to it. Signed: <your name>, <YYYY-MM-DD>
+```
+
 ## Checklist
 
 - [ ] The suites pass: `python tests/test_screen.py` and friends, plus
