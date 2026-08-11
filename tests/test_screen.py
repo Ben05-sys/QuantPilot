@@ -550,8 +550,10 @@ def main():
           abs(trrow["GAPPED"]["atr_pct"] - 22 / 82 * 100) < 1e-9,
           trrow["GAPPED"]["atr_pct"])
     check("atr resolves", screen.resolve("atr") == "atr_pct")
-    check("atr_pct needs today's range and price, so it isn't prefiltered on a stale one",
-          "atr_pct" in screen.LIVE_COLUMNS and "atr_pct" not in screen.STATIC_SAFE)
+    check("atr_pct needs today's range and price, so it isn't prefiltered "
+          "on a stale one",
+          "atr_pct" in screen.LIVE_COLUMNS
+          and "atr_pct" not in screen.STATIC_SAFE)
 
     print("\nsma spread")
     ss = derive(pd.DataFrame({
@@ -570,8 +572,10 @@ def main():
           abs(ssrow["BELOW"]["sma_spread"] - (-5.0)) < 1e-9,
           ssrow["BELOW"]["sma_spread"])
     check("smaspread resolves", screen.resolve("smaspread") == "sma_spread")
-    check("sma_spread depends only on two slow-moving averages, so it narrows safely stale",
-          "sma_spread" in screen.STATIC_SAFE and "sma_spread" not in screen.LIVE_COLUMNS)
+    check("sma_spread depends only on two slow-moving averages, so it "
+          "narrows safely stale",
+          "sma_spread" in screen.STATIC_SAFE
+          and "sma_spread" not in screen.LIVE_COLUMNS)
 
     print("\nearnings yield")
     ey = derive(pd.DataFrame({
@@ -614,7 +618,8 @@ def main():
           egrow["RECOVERING"]["eps_growth"])
     check("epsgrowth resolves", screen.resolve("epsgrowth") == "eps_growth")
     check("eps growth tracks two estimates, not price, so it narrows safely stale",
-          "eps_growth" in screen.STATIC_SAFE and "eps_growth" not in screen.LIVE_COLUMNS)
+          "eps_growth" in screen.STATIC_SAFE
+          and "eps_growth" not in screen.LIVE_COLUMNS)
 
     print("\npeg")
     pg = derive(pd.DataFrame({
@@ -629,9 +634,11 @@ def main():
     pgrow = dict(zip(pg["symbol"], pg.to_dict("records"), strict=True))
     check("growing name: peg is P/E over the growth rate eps_growth supplies",
           abs(pgrow["GROWER"]["peg"] - 0.8) < 1e-9, pgrow["GROWER"]["peg"])
-    check("shrinking estimates: peg stays null rather than flip sign into a fake bargain",
+    check("shrinking estimates: peg stays null rather than flip sign into "
+          "a fake bargain",
           np.isnan(pgrow["DECLINER"]["peg"]), pgrow["DECLINER"]["peg"])
-    check("peg tracks the same slow-moving inputs as pe and eps_growth, so it narrows safely stale",
+    check("peg tracks the same slow-moving inputs as pe and eps_growth, so "
+          "it narrows safely stale",
           "peg" in screen.STATIC_SAFE and "peg" not in screen.LIVE_COLUMNS)
 
     print("\npayout ratio")
@@ -651,7 +658,8 @@ def main():
     check("loss-making name: payout stays null rather than a fake positive number",
           np.isnan(prrow["LOSER"]["payout_ratio"]), prrow["LOSER"]["payout_ratio"])
     check("payout resolves", screen.resolve("payout") == "payout_ratio")
-    check("payout ratio tracks dividend and trailing eps, not price, so it narrows safely stale",
+    check("payout ratio tracks dividend and trailing eps, not price, so it "
+          "narrows safely stale",
           "payout_ratio" in screen.STATIC_SAFE
           and "payout_ratio" not in screen.LIVE_COLUMNS)
 
