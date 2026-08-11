@@ -32,6 +32,7 @@ from . import store
 # Real columns, from the snapshot table plus what universe.derive() adds.
 DERIVED = ["rel_volume", "rel_volume_raw", "rel_volume_10d", "session_fraction",
            "pct_from_52w_high", "pct_from_52w_low", "pct_52w_range",
+           "range_52w_width",
            "pct_from_sma50", "pct_from_sma200", "earnings_days",
            "earnings_when", "peg", "mktcap", "chg", "is_adr",
            "rs_sector", "sector_change_pct",
@@ -85,6 +86,10 @@ STATIC_SAFE = {
     # few hours does not change; unlike `pct_from_sma50` it does not also
     # depend on today's price.
     "sma_spread",
+    # The width of the 52-week high/low band, unlike `pct_52w_range` above,
+    # never touches today's price — only the two endpoints, which move on
+    # their own slow schedule.
+    "range_52w_width",
     # Same drift tolerance as `pe`, whose reciprocal this is: trailing EPS
     # barely moves intraday, so a few hours of price drift does not change
     # which side of a yield threshold a name falls on.
@@ -124,6 +129,7 @@ ALIASES = {
     "perf52": "week52_change_pct",
     "from52high": "pct_from_52w_high", "from52low": "pct_from_52w_low",
     "pos52": "pct_52w_range", "range52pos": "pct_52w_range",
+    "width52": "range_52w_width", "range52width": "range_52w_width",
     "fromsma50": "pct_from_sma50", "fromsma200": "pct_from_sma200",
     "sma50pct": "pct_from_sma50", "sma200pct": "pct_from_sma200",
     "smaspread": "sma_spread", "crossdist": "sma_spread",

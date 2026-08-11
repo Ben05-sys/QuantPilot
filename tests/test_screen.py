@@ -451,6 +451,20 @@ def main():
           "pct_52w_range" in screen.LIVE_COLUMNS
           and "pct_52w_range" not in screen.STATIC_SAFE)
 
+    print("\n52-week range width")
+    check("DEAR's range is 150% of its low: (250-100)/100",
+          abs(row["DEAR"]["range_52w_width"] - 150.0) < 1e-9,
+          row["DEAR"]["range_52w_width"])
+    check("NOTRADE's narrower range reads smaller even though its position "
+          "in the range is similar to CHEAP's",
+          row["NOTRADE"]["range_52w_width"] < row["CHEAP"]["range_52w_width"],
+          (row["NOTRADE"]["range_52w_width"], row["CHEAP"]["range_52w_width"]))
+    check("width52 resolves", screen.resolve("width52") == "range_52w_width")
+    check("range_52w_width depends only on the two slow endpoints, so it "
+          "narrows safely stale",
+          "range_52w_width" in screen.STATIC_SAFE
+          and "range_52w_width" not in screen.LIVE_COLUMNS)
+
     print("\ngap percent")
     check("gapped up 5%", abs(row["CHEAP"]["gap_pct"] - 5.0) < 1e-9,
           row["CHEAP"]["gap_pct"])

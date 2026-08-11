@@ -320,6 +320,12 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
     # number that says which, the same way `day_range_pct` does for a day.
     df["pct_52w_range"] = safe(
         df["price"] - df["week52_low"], df["week52_high"] - df["week52_low"]) * 100
+    # How wide the 52-week range itself is, as a percent of the low. Two
+    # names can share the same `pct_52w_range` reading — say, both sitting
+    # at the midpoint — and still be nothing alike: one range is a tight
+    # channel, the other a wild swing. This is the missing scale.
+    df["range_52w_width"] = safe(
+        df["week52_high"] - df["week52_low"], df["week52_low"]) * 100
     df["pct_from_sma50"] = safe(df["price"] - df["sma50"], df["sma50"]) * 100
     df["pct_from_sma200"] = safe(df["price"] - df["sma200"], df["sma200"]) * 100
     # SMA50 vs SMA200 as a percent apart — the golden-cross distance.
