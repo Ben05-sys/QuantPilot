@@ -915,7 +915,7 @@ async function api(path, opts){
 /* ---------- formatting ---------- */
 const nf = (v,d=2)=> (v===null||v===undefined||Number.isNaN(v)) ? "" : v.toFixed(d);
 function fcap(v){
-  if(v===null||v===undefined) return "";
+  if(v===null||v===undefined||Number.isNaN(v)) return "";
   const a=Math.abs(v);
   if(a>=1e12) return (v/1e12).toFixed(2)+"T";
   if(a>=1e9)  return (v/1e9).toFixed(2)+"B";
@@ -924,7 +924,7 @@ function fcap(v){
   return v.toFixed(0);
 }
 function fvol(v){
-  if(v===null||v===undefined) return "";
+  if(v===null||v===undefined||Number.isNaN(v)) return "";
   const a=Math.abs(v);
   if(a>=1e9) return (v/1e9).toFixed(2)+"B";
   if(a>=1e6) return (v/1e6).toFixed(1)+"M";
@@ -932,7 +932,7 @@ function fvol(v){
   return String(Math.round(v));
 }
 function fpct(v,d=2){
-  if(v===null||v===undefined) return "";
+  if(v===null||v===undefined||Number.isNaN(v)) return "";
   return (v>0?"+":"")+v.toFixed(d)+"%";
 }
 const cls = v => v===null||v===undefined ? "flat" : v>0 ? "up" : v<0 ? "dn" : "flat";
@@ -2220,7 +2220,7 @@ S.news = {symbol:null, items:[], strict:false, note:""};
 S.filings = {rows:[], note:""};
 
 function fage(seconds){
-  if(seconds==null) return "";
+  if(seconds==null||Number.isNaN(seconds)) return "";
   const m = seconds/60;
   if(m < 60) return Math.max(0,Math.round(m))+"m";
   const h = m/60;
