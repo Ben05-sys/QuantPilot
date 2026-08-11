@@ -51,6 +51,17 @@ saved screen will be called out here under **Changed** rather than buried.
 - **The `STREAM` badge states the delay it is measuring** — the median gap
   between the venue's timestamp and the print arriving, over the last two
   hundred prints, rather than a green light that means "a socket is open".
+- **`atr_pct` — true range as a percentage of price**, so the same reading
+  compares across price levels. Screenable, aliased `atr`, and classified
+  live rather than static-safe: it is built from today's range and today's
+  price, so prefiltering it against a stale snapshot would answer a question
+  about yesterday.
+- **A [contributor licence agreement](CLA.md).** It asks one thing beyond the
+  AGPL — permission to license the project commercially as well — and grants
+  a licence rather than taking an assignment, so contributors keep the
+  copyright in their own work. Without one, a single merged pull request from
+  someone later unreachable pins the project to AGPL-only permanently, which
+  is a decision worth making on purpose.
 
 ### Changed
 
@@ -96,6 +107,15 @@ saved screen will be called out here under **Changed** rather than buried.
   the *feed*: outside the most active few hundred names a stock can go
   minutes between trades, and those rows sat at their snapshot price for as
   long as you looked at them, under a badge reporting the feed as live.
+- **A halted name no longer drags its sector's average toward flat.**
+  `rs_sector` zero-filled a missing `change_pct` while still counting that
+  row's full market-cap weight in the denominator, so a name with no reading
+  today — a trading halt, or one absent from a partial refresh — was treated
+  as "flat" rather than "unknown". On a sector with two names genuinely up
+  10% and a halted large-cap third, the average read 2%, and every other
+  name's relative strength was then measured against that wrong baseline.
+  Missing rows now carry no weight at all, the same way every other field
+  here refuses to turn "missing" into "zero".
 
 ## [0.1.1] — 2026-08-01
 

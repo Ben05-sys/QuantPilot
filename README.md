@@ -497,8 +497,10 @@ afternoon — `## Layout` above is the map, and every module opens with a
 docstring explaining why it exists rather than what it does.
 
 By taking part you agree to the
-[Code of Conduct](CODE_OF_CONDUCT.md); released versions are listed in the
-[changelog](CHANGELOG.md).
+[Code of Conduct](CODE_OF_CONDUCT.md), and a first pull request signs the
+[CLA](CLA.md) — one line, you keep your copyright, and it lets the project be
+dual-licensed later without hunting down every past contributor. Released
+versions are listed in the [changelog](CHANGELOG.md).
 
 Tests are plain scripts, no pytest:
 

@@ -137,7 +137,18 @@ basis of anything published or sold.
 
 ## Licence
 
-By contributing you agree your work is licensed under **AGPL-3.0**, the same as
-the project. In particular, anyone running a modified version as a network
-service has to publish their source — that clause is the whole reason for
-choosing AGPL over MIT.
+The project is **AGPL-3.0** and stays that way. Anyone running a modified
+version as a network service has to publish their source — that clause is the
+whole reason for choosing AGPL over MIT.
+
+Contributions also need a signed **[Contributor Licence Agreement](CLA.md)**,
+which asks one thing beyond the AGPL: permission to license the project on
+commercial terms as well. You keep the copyright in your work — the CLA is a
+licence grant, not an assignment, so your code stays yours to use anywhere
+else. Signing takes one line in your first pull request and covers everything
+you contribute afterwards.
+
+The reason it is worth your two minutes: without it, one merged pull request
+from someone who later becomes unreachable pins the whole project to AGPL-only
+permanently. That is a decision worth making deliberately rather than by
+accident. CLA.md explains the rest.
