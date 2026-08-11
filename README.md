@@ -447,7 +447,8 @@ python tests/test_calendars.py # dividend + IPO parsing, against pasted payloads
 python tests/test_clock.py     # session transitions, replayed in milliseconds
 python tests/test_server.py    # every route, on an ephemeral port
 python tests/test_article.py   # the reader's address check, every hop of it
-node   tests/ui_smoke.js       # boots the page in jsdom
+node   tests/ui_smoke.js       # boots the page in jsdom and drives the views
+node   tests/ui_units.js       # formatting, virtualization, token, escaping
 ```
 
 Network-dependent checks in `test_server.py` report as skipped, not failed,
@@ -460,6 +461,11 @@ failure that actually bites is a runtime throw at load: it kills every
 handler registered after it, and the page then renders perfectly while doing
 nothing. It borrows the jsdom install from `OfflinePilotX/tests`, so there is
 no new dependency.
+
+`ui_units.js` covers what a working-looking page can still get wrong: a
+formatter painting `NaN` into a market-cap cell, virtualization quietly
+rendering all 7,000 rows, an API call going out without its token, or an
+upstream company name reaching the DOM unescaped.
 
 ## Parked
 

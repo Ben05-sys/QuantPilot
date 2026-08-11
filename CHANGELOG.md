@@ -62,6 +62,11 @@ saved screen will be called out here under **Changed** rather than buried.
   copyright in their own work. Without one, a single merged pull request from
   someone later unreachable pins the project to AGPL-only permanently, which
   is a decision worth making on purpose.
+- **`tests/ui_units.js`**, a second UI suite underneath `ui_smoke`. It covers
+  the four places a regression would be invisible on a page that still looks
+  right: number formatting, grid virtualization, the per-launch token on every
+  API call, and escaping of upstream strings. 79 assertions, same jsdom
+  install as the smoke suite, and it found the formatter bug below.
 
 ### Changed
 
@@ -107,6 +112,14 @@ saved screen will be called out here under **Changed** rather than buried.
   the *feed*: outside the most active few hundred names a stock can go
   minutes between trades, and those rows sat at their snapshot price for as
   long as you looked at them, under a badge reporting the feed as live.
+- **A market cap the terminal does not have no longer reads `NaN`.** `nf()`
+  guarded against `NaN` and its three siblings did not, so `fcap`, `fvol`,
+  `fpct` and `fage` would paint the literal string `NaN` — or `NaN%` — into a
+  grid cell. `to_records()` turns `NaN` into null on the way out of the API,
+  which is why nobody had seen it, but the browser also writes tick values
+  straight into rows and the strip does its own arithmetic, so the formatter
+  is the last line of defence. Blank is the honest answer, and the same one
+  `nf()` already gave.
 - **A halted name no longer drags its sector's average toward flat.**
   `rs_sector` zero-filled a missing `change_pct` while still counting that
   row's full market-cap weight in the denominator, so a name with no reading

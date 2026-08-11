@@ -99,9 +99,13 @@ jobs:
       # ui_smoke boots the whole UI in jsdom — the only thing that catches a
       # runtime throw at page load, which otherwise leaves the terminal
       # rendering perfectly with every handler after the bad line dead.
+      # ui_units goes underneath it: formatting, virtualization, the token
+      # on every API call, and escaping. One jsdom install serves both.
       - name: ui smoke
         working-directory: tests
         run: |
           npm install jsdom --no-fund --no-audit
           cd ..
           node tests/ui_smoke.js
+      - name: ui units
+        run: node tests/ui_units.js

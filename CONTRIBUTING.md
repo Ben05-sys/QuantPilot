@@ -30,16 +30,26 @@ python tests/test_diffs.py     python tests/test_options.py   python tests/test_
 python tests/test_server.py    python tests/test_livenews.py  python tests/test_article.py
 
 cd tests && npm install jsdom && cd ..
-node tests/ui_smoke.js
+node tests/ui_smoke.js       node tests/ui_units.js
 ```
 
-534 assertions pass today and that number should only go up. **Run them before
+Assertions pass today and that number should only go up. **Run them before
 opening a PR.**
 
-`ui_smoke.js` is the one that matters most if you touch `app/web/index.html`.
-It boots the whole UI in jsdom and is the only thing that catches a runtime
-throw at page load — the failure that leaves the terminal rendering perfectly
-while every handler after the bad line is quietly dead.
+The two UI suites split by altitude, and both matter if you touch
+`app/web/index.html`:
+
+`ui_smoke.js` boots the whole terminal in jsdom and drives the views. It is
+the only thing that catches a runtime throw at page load — the failure that
+leaves the terminal rendering perfectly while every handler after the bad line
+is quietly dead.
+
+`ui_units.js` sits underneath that, on the four things a regression would hide
+in: **formatting** (a cell must never read `NaN` or a stand-in zero where the
+terminal has no number — house rule 2, on screen), **virtualization** (7,000
+rows must stay a window of DOM nodes, or the terminal passes every six-row
+test and dies on a real universe), **the token** on every API call, and
+**escaping** of upstream strings on their way into the DOM.
 
 If a change needs a test to prove it, write one that **fails before your change
 and passes after**. If you cannot construct that test, the change is not
