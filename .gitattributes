@@ -10,3 +10,9 @@
 # stats read this repo as mostly HTML unless told that the file is the app.
 app/web/index.html linguist-detectable
 docs/*             linguist-documentation
+
+# docs/demo/ is output, not source — tools/build_demo.py writes all of it,
+# including a verbatim copy of the UI and a few MB of captured fixtures.
+# `linguist-generated` keeps it out of the language stats and collapses it
+# in diffs, so a rebuilt demo doesn't read as thousands of changed lines.
+docs/demo/**       linguist-generated

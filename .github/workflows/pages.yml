@@ -1,0 +1,58 @@
+name: demo
+
+# Publishes docs/demo to GitHub Pages.
+#
+# It only copies. The demo is *built locally* by tools/build_demo.py and
+# committed, and that is deliberate: building it here would mean GitHub's
+# runners calling Yahoo's undocumented endpoints on a schedule, from
+# shared IPs, to produce a public artifact — which is the one use their
+# terms are clearest about. One person recording their own terminal for
+# two minutes and committing the result is a screenshot that moves.
+#
+# So: to refresh the demo, run it on your own machine during US market
+# hours and commit the output.
+#
+#     python pilot.py --refresh
+#     python tools/build_demo.py --seconds 120
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/demo/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time; never cancel one half-done.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the demo was built
+        run: |
+          test -f docs/demo/index.html || {
+            echo "docs/demo/index.html missing — run tools/build_demo.py"; exit 1; }
+          test -f docs/demo/data.js || {
+            echo "docs/demo/data.js missing — run tools/build_demo.py"; exit 1; }
+          ls -la docs/demo
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/demo
+      - id: deploy
+        uses: actions/deploy-pages@v4

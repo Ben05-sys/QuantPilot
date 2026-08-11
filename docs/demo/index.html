@@ -1,0 +1,3371 @@
+<!doctype html>
+<html lang="en">
+<head>
+<!-- Built by tools/build_demo.py. The page below is app/web/index.html verbatim; these two scripts stand in for the server. -->
+<script src="data.js"></script>
+<script src="shim.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QuantPilot</title>
+<style>
+/* ------------------------------------------------------------------
+   Bloomberg chrome, Finviz density.
+   Amber is structure: borders, headers, labels, the command line.
+   Red and green are reserved for price movement and nothing else, so
+   the eye reads direction without having to look for it.
+   ------------------------------------------------------------------ */
+:root{
+  --bg:#000; --panel:#070707; --panel2:#0c0b09;
+  --amber:#ffa000; --amber-hi:#ffc247; --amber-dim:#a8720f;
+  --text:#e8d5b0; --muted:#8a7550;
+  --line:#3a2a08; --line-hi:#5a410c;
+  --green:#12d18e; --red:#ff4a4a; --flash:#4a3400;
+  --row:19px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--text);
+  font:11px/1.45 Consolas,"Cascadia Mono","DejaVu Sans Mono",Menlo,monospace;
+  display:flex; flex-direction:column; overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+::selection{background:var(--amber);color:#000}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:#080808}
+::-webkit-scrollbar-thumb{background:#2e2205;border:1px solid var(--line)}
+::-webkit-scrollbar-thumb:hover{background:#4a3609}
+
+.up{color:var(--green)} .dn{color:var(--red)} .flat{color:var(--muted)}
+.amber{color:var(--amber)} .dim{color:var(--muted)}
+
+/* ---- header ---- */
+/* Three zones, not ten loose items: who and when on the left, what the
+   market is doing in the middle, tools on the right. Separators do the
+   grouping so the eye can skip to the zone it wants. */
+#top{
+  display:flex;align-items:center;gap:0;padding:0;height:26px;
+  background:linear-gradient(#151005,#000);
+  border-bottom:1px solid var(--line-hi);flex:0 0 auto;
+}
+#top .zone{display:flex;align-items:center;gap:9px;padding:0 11px;height:100%}
+#top .zone + .zone{border-left:1px solid var(--line)}
+#zoneTools{margin-left:auto;gap:7px}
+#brand{color:#000;background:var(--amber);padding:1px 8px;font-weight:700;
+  letter-spacing:.14em}
+#clock{color:var(--amber-hi);letter-spacing:.06em}
+#dataInfo{display:flex;flex-direction:column;line-height:1.05;font-size:10px;
+  color:var(--muted);text-align:right}
+.badge{border:1px solid var(--line-hi);padding:0 6px;color:var(--amber-dim);
+  letter-spacing:.08em;white-space:nowrap}
+.badge.live{color:#000;background:var(--green);border-color:var(--green)}
+.badge.delayed{color:#000;background:var(--amber);border-color:var(--amber)}
+.badge.closed{color:var(--muted)}
+.badge.err{color:#000;background:var(--red);border-color:var(--red)}
+#top .grow{flex:1}
+button.hdr{background:transparent;border:1px solid var(--line-hi);
+  color:var(--amber);font:inherit;padding:0 8px;cursor:pointer;height:17px}
+button.hdr:hover{background:var(--amber);color:#000}
+
+/* ---- index strip ---- */
+#tape{display:flex;height:24px;flex:0 0 auto;
+  border-bottom:1px solid var(--line);background:var(--panel);overflow:hidden}
+#strip{display:flex;align-items:stretch;overflow:hidden;flex:0 0 auto}
+#futures{display:flex;align-items:stretch;overflow:hidden;flex:1;
+  border-left:2px solid var(--line-hi);opacity:.82}
+.idx{display:flex;align-items:center;gap:6px;padding:0 11px;
+  border-right:1px solid var(--line);white-space:nowrap;cursor:pointer}
+.idx:hover{background:#151005}
+.idx b{color:var(--amber);font-weight:400;letter-spacing:.1em}
+.idx .px{color:var(--text)}
+#stripNote{display:flex;align-items:center;padding:0 11px;
+  color:var(--muted);white-space:nowrap}
+
+/* ---- body ---- */
+#main{flex:1;display:flex;min-height:0}
+#rail{width:44px;flex:0 0 44px;border-right:1px solid var(--line);
+  background:var(--panel);display:flex;flex-direction:column}
+.tab{padding:7px 0;text-align:center;cursor:pointer;color:var(--amber-dim);
+  border-bottom:1px solid #1a1305;line-height:1.25}
+.tab b{display:block;color:var(--amber);font-weight:400}
+.tab:hover{background:#151005}
+.tab.on{background:var(--amber);color:#000}
+.tab.on b{color:#000}
+#views{flex:1;min-width:0;display:flex;flex-direction:column}
+.view{flex:1;min-height:0;display:none;flex-direction:column}
+.view.on{display:flex}
+
+/* ---- filter bar ---- */
+#filters{display:flex;flex-wrap:wrap;gap:1px;padding:3px 4px;flex:0 0 auto;
+  border-bottom:1px solid var(--line);background:var(--panel2);align-items:center}
+.fl{display:flex;align-items:center;gap:3px;padding:0 3px}
+.fl span{color:var(--muted)}
+select{background:#000;color:var(--amber);border:1px solid var(--line-hi);
+  font:inherit;padding:1px 2px;max-width:150px;cursor:pointer;outline:none}
+select:focus{border-color:var(--amber)}
+select.set{background:#2a1e04;color:var(--amber-hi)}
+button.act{background:transparent;border:1px solid var(--line-hi);color:var(--amber);
+  font:inherit;padding:1px 9px;cursor:pointer}
+button.act:hover{background:var(--amber);color:#000}
+#chips{display:flex;gap:5px;flex-wrap:wrap;padding:2px 8px;min-height:17px;
+  border-bottom:1px solid var(--line);align-items:center;flex:0 0 auto;
+  background:#050505}
+.chip{border:1px solid var(--line-hi);padding:0 6px;color:var(--amber-hi);
+  background:#1a1204}
+#count{margin-left:auto;color:var(--muted);white-space:nowrap}
+#count.warn{color:var(--amber-hi)}
+
+/* ---- grid ---- */
+#gridHead{display:flex;flex:0 0 auto;background:#100c03;
+  border-bottom:1px solid var(--line-hi);height:20px;align-items:center;
+  overflow:hidden}
+#gridHead div{color:var(--amber);cursor:pointer;padding:0 5px;flex:0 0 auto;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:.04em}
+#gridHead div:hover{background:#241a05}
+#screenBody{flex:1;display:flex;min-height:0}
+#gridWrap{flex:1;overflow:auto;position:relative;outline:none}
+#gridWrap:focus-within,#gridWrap.kb{box-shadow:inset 0 0 0 1px var(--line-hi)}
+#gridSpacer{position:relative}
+.r.cur{background:#33240a;box-shadow:inset 2px 0 0 var(--amber)}
+.r.hov{background:#241a06}
+
+/* ---- cursor detail strip ----
+   Depth for one row at a time. The grid stays the width it is: anything
+   that would have been a fifteenth column lives down here instead, for
+   whichever row the cursor or the mouse is on. */
+#cstrip{flex:0 0 auto;height:35px;padding:1px 9px;background:#0b0800;
+  border-top:1px solid var(--line-hi);overflow:hidden;white-space:nowrap}
+#cstrip .k{color:var(--amber-dim);margin-left:13px}
+#cstrip .k.first{margin-left:0}
+#cstrip .v{color:var(--amber-hi)}
+#cstrip .sy{color:var(--amber-hi);letter-spacing:.06em}
+#cstrip .sep{color:var(--line-hi);margin-left:13px}
+#csLine1,#csLine2{display:flex;align-items:center;height:16px}
+#csLine2{color:var(--muted)}
+#csBar{position:relative;width:186px;height:7px;margin:0 6px;
+  border:1px solid var(--line-hi);background:#140e02;flex:0 0 auto}
+#csFill{position:absolute;top:0;bottom:0;left:0;background:#3d2c08}
+#csOpen{position:absolute;top:-2px;width:1px;height:11px;
+  background:var(--amber-dim)}
+#csDot{position:absolute;top:-3px;width:3px;height:13px;
+  background:var(--amber-hi);margin-left:-1px}
+
+/* ---- futures strip ---- */
+
+#futures .idx b{color:var(--amber-dim)}
+#futures .idx{padding:0 9px}
+
+/* ---- watch panel ---- */
+#watchPanel{width:236px;flex:0 0 236px;border-left:1px solid var(--line);
+  background:var(--panel);overflow-y:auto;display:flex;flex-direction:column}
+#watchPanel.off{display:none}
+.wrow{display:flex;align-items:center;gap:5px;padding:1px 7px;cursor:pointer;
+  border-bottom:1px solid #100c04}
+.wrow:hover{background:#1c1405}
+.wrow .ws{color:var(--amber-hi);width:52px;flex:0 0 52px}
+.wrow .wp{width:60px;text-align:right;flex:0 0 60px}
+.wrow .wc{width:56px;text-align:right;flex:0 0 56px}
+.wrow .wx{color:var(--red);padding:0 3px;visibility:hidden}
+.wrow:hover .wx{visibility:visible}
+.wpnl{padding:1px 7px;color:var(--muted);border-bottom:1px solid #100c04}
+
+/* ---- earnings ---- */
+#earnWrap{flex:1;overflow-y:auto;background:var(--panel)}
+.eday{display:flex;align-items:baseline;gap:10px;padding:2px 9px;
+  background:#150f04;border-top:1px solid var(--line-hi);
+  border-bottom:1px solid var(--line);position:sticky;top:0;z-index:2}
+.eday b{color:var(--amber);font-weight:400;letter-spacing:.1em}
+.erow{display:flex;align-items:center;gap:6px;padding:1px 9px;cursor:pointer;
+  border-bottom:1px solid #100c04}
+.erow:hover{background:#1c1405}
+.erow .es{color:var(--amber-hi);width:62px;flex:0 0 62px}
+.erow .en{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;color:var(--muted)}
+.erow .ew{width:38px;flex:0 0 38px;text-align:center;font-size:10px}
+.erow .ew.bmo{color:#4a7fd4} .erow .ew.amc{color:var(--amber)}
+.erow .ev{width:74px;flex:0 0 74px;text-align:right}
+.erow .ec{width:62px;flex:0 0 62px;text-align:right}
+
+/* ---- saved-screen diffs ---- */
+.sv .dif{flex:0 0 auto;color:var(--muted);white-space:nowrap}
+.sv .dif .up{color:var(--green)} .sv .dif .dn{color:var(--red)}
+.dif-detail{padding:1px 6px 3px 18px;border-bottom:1px solid #120d04;
+  line-height:1.7}
+.wsym{color:var(--amber-hi);cursor:pointer;padding:0 1px}
+.wsym:hover{background:var(--amber);color:#000}
+
+/* ---- search ---- */
+#searchWrap{position:relative}
+#search{background:#000;border:1px solid var(--line-hi);color:var(--amber-hi);
+  font:inherit;padding:1px 7px;width:190px;outline:none;height:17px}
+#search:focus{border-color:var(--amber);width:250px}
+#search::placeholder{color:#5a4a2a}
+#searchDrop{position:absolute;top:20px;right:0;min-width:330px;z-index:50;
+  background:#000;border:1px solid var(--amber);display:none;
+  box-shadow:0 6px 22px #000;max-height:340px;overflow-y:auto}
+.sr{display:flex;gap:8px;align-items:baseline;padding:2px 8px;cursor:pointer;
+  border-bottom:1px solid #120d04}
+.sr:hover,.sr.on{background:var(--amber);color:#000}
+.sr:hover .dim,.sr.on .dim{color:#3a2a00}
+.sr .srs{color:var(--amber-hi);width:80px;flex:0 0 80px}
+.sr:hover .srs,.sr.on .srs{color:#000}
+.sr .srn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap}
+
+/* ---- market news ---- */
+#mktMovers{display:flex;gap:0;flex:0 0 auto;overflow-x:auto;
+  border-bottom:1px solid var(--line);background:#050505}
+#mktNews{flex:1;overflow-y:auto;background:var(--panel)}
+.mrow{display:flex;gap:9px;align-items:baseline;padding:3px 10px;
+  border-bottom:1px solid #100c04;cursor:pointer}
+.mrow:hover{background:#1c1405}
+.mrow .hot{width:34px;flex:0 0 34px;text-align:right;color:var(--muted);
+  font-size:10px}
+.mrow.veryhot{background:#1a1002}
+.mrow.veryhot .hot{color:#000;background:var(--red);text-align:center;
+  border-radius:2px}
+.mrow .mtick{width:74px;flex:0 0 74px;color:var(--amber-hi)}
+.mrow .mtick .mkt{color:var(--muted)}
+.mrow .mchg{width:56px;flex:0 0 56px;text-align:right}
+.mrow .mage{width:46px;flex:0 0 46px;text-align:right;color:var(--amber-dim)}
+.mrow .mpub{width:118px;flex:0 0 118px;color:var(--muted);overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.mrow .mtitle{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap}
+
+/* ---- ticker: one tabbed panel under the chart ----
+   Was two stacked panels with two title bars, which left the chart the
+   smallest thing on its own page. */
+#tkTabs{display:flex;align-items:center;gap:0;flex:0 0 auto;background:#120d03;
+  border-top:1px solid var(--line-hi);border-bottom:1px solid var(--line)}
+.tkTab{padding:2px 13px;cursor:pointer;color:var(--amber-dim);
+  letter-spacing:.1em;border-right:1px solid var(--line)}
+.tkTab:hover{background:#1c1405;color:var(--amber-hi)}
+.tkTab.on{background:var(--amber);color:#000}
+#paneNote{padding:0 10px;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap}
+#strictWrap{margin-left:auto;padding:0 9px;cursor:pointer;white-space:nowrap}
+#strictWrap input{accent-color:var(--amber);vertical-align:-1px}
+#tkPanes{flex:0 0 168px;position:relative;background:var(--panel)}
+.pane{display:none;position:absolute;inset:0;overflow-y:auto}
+.pane.on{display:block}
+
+/* related rows */
+.rel{display:flex;gap:6px;align-items:baseline;padding:2px 9px;width:50%;
+  float:left;cursor:pointer;border-bottom:1px solid #100c04}
+.rel:hover{background:#1c1405}
+.rel .rs{color:var(--amber-hi);width:56px;flex:0 0 56px}
+.rel .rk{width:44px;flex:0 0 44px;font-size:10px;color:var(--muted)}
+.rel .rk.chain{color:var(--amber)}
+.rel .rn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;color:var(--muted)}
+.rel .rc{width:54px;flex:0 0 54px;text-align:right}
+.rel .rf{width:30px;flex:0 0 30px;text-align:right;color:var(--amber-dim);
+  font-size:10px}
+
+/* ---- chart compare ---- */
+#cmpBox{position:absolute;top:6px;right:70px;display:flex;gap:4px;
+  align-items:center;background:rgba(0,0,0,.72);padding:2px 5px;
+  border:1px solid var(--line-hi)}
+#cmpSym{background:#000;border:1px solid var(--line-hi);color:var(--amber-hi);
+  font:inherit;width:62px;padding:0 4px;outline:none}
+#cmpBox button{padding:0 5px;line-height:14px}
+
+/* ---- alerts ---- */
+#alertBell{cursor:pointer}
+#alertBell.on{color:#000;background:var(--red);border-color:var(--red)}
+
+/* ---- news ---- */
+.nrow{display:flex;gap:8px;align-items:baseline;padding:2px 9px;
+  border-bottom:1px solid #100c04;color:var(--text);cursor:pointer}
+.nrow:hover{background:#1c1405}
+.nrow .nage{color:var(--amber-dim);width:48px;flex:0 0 48px;text-align:right}
+.nrow .ntick{width:56px;flex:0 0 56px;color:var(--amber-hi)}
+.nrow .npub{color:var(--muted);width:112px;flex:0 0 112px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.nrow .ntitle{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap}
+.nrow .nrel{color:var(--amber-dim);flex:0 0 auto;max-width:190px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nrow.fresh .nage{color:var(--green)}
+.r{position:absolute;left:0;height:var(--row);display:flex;
+  align-items:center;cursor:pointer;border-bottom:1px solid #0e0e0e}
+.r>div{flex:0 0 auto}
+.r:hover{background:#1c1405}
+.r.sel{background:#2a1e04}
+.r>div{padding:0 5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.r .sym{color:var(--amber-hi)}
+.num{text-align:right}
+/* Direction is the whole point of the flash: green up, red down. Only
+   the cells that actually moved flash — washing the entire row on every
+   tick is what makes a terminal tiring to sit in front of. */
+.tick.up{animation:tkup .45s ease-out}
+.tick.dn{animation:tkdn .45s ease-out}
+@keyframes tkup{
+  0%{background:var(--green);color:#000}
+  60%{background:rgba(18,209,142,.28);color:inherit}
+  100%{background:transparent}
+}
+@keyframes tkdn{
+  0%{background:var(--red);color:#000}
+  60%{background:rgba(255,74,74,.28);color:inherit}
+  100%{background:transparent}
+}
+#empty{padding:26px;color:var(--muted);text-align:center;display:none}
+
+/* ---- heatmap ---- */
+#mapBar{display:flex;gap:9px;align-items:center;padding:0 9px;height:24px;
+  border-bottom:1px solid var(--line);background:var(--panel2);flex:0 0 auto}
+#mapBar > .vtitle{color:var(--amber);letter-spacing:.12em;
+  padding-right:9px;margin-right:2px;border-right:1px solid var(--line);
+  height:100%;display:flex;align-items:center;white-space:nowrap}
+#mapBar > .vstatus{margin-left:auto;color:var(--muted);font-size:10px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:45%}
+#mapBar select,#mapBar button.act{height:17px}
+#mapWrap{flex:1;position:relative;min-height:0}
+#map{display:block;width:100%;height:100%}
+#mapTip,#worldTip{position:absolute;pointer-events:none;display:none;z-index:5;
+  background:#000;border:1px solid var(--amber);padding:4px 7px;
+  box-shadow:0 3px 14px #000;white-space:nowrap}
+#mapBar button.act.on{background:var(--amber);color:#000}
+
+/* ---- live news ----
+   The player and the rail sit side by side because the point of the view
+   is the pairing: the picture on the left, and what the tape says about
+   what it is talking about on the right. */
+#lnWrap{flex:1;display:flex;min-height:0;background:var(--panel)}
+#lnMain{flex:1;display:flex;flex-direction:column;min-width:0}
+#lnChannels{display:flex;gap:0;flex:0 0 auto;overflow-x:auto;
+  border-bottom:1px solid var(--line);background:#050505}
+.lnch{padding:3px 11px;border-right:1px solid var(--line);cursor:pointer;
+  white-space:nowrap;color:var(--muted)}
+.lnch:hover{background:#1c1405;color:var(--amber-hi)}
+.lnch.on{background:var(--amber);color:#000}
+.lnch.off{color:#4a4034;cursor:default}
+.lnch.off:hover{background:none;color:#4a4034}
+/* A dot rather than the word LIVE: the wall is scanned, not read. */
+.lnch .dot{display:inline-block;width:5px;height:5px;border-radius:50%;
+  margin-right:6px;background:#3a3128;vertical-align:middle}
+.lnch.islive .dot{background:#4ad06a;box-shadow:0 0 5px #4ad06a}
+.lnch .who{font-size:10px;color:inherit;opacity:.65;margin-left:7px}
+#lnPlayer{flex:1;position:relative;min-height:0;background:#000;
+  display:flex;align-items:center;justify-content:center}
+#lnPlayer iframe{width:100%;height:100%;border:0;display:block}
+#lnEmpty{padding:20px;text-align:center}
+#lnRail{flex:0 0 290px;display:flex;flex-direction:column;min-height:0;
+  border-left:1px solid var(--line);background:#050505}
+#lnRailHead{padding:3px 9px;border-bottom:1px solid var(--line);
+  color:var(--amber);letter-spacing:.1em;flex:0 0 auto;
+  display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+#lnRailHead .dim{font-size:10px;letter-spacing:0}
+#lnMentions{flex:1;overflow-y:auto}
+.lnm{padding:4px 9px;border-bottom:1px solid #100c04;cursor:pointer}
+.lnm:hover{background:#1c1405}
+.lnm .top{display:flex;justify-content:space-between;gap:8px;
+  align-items:baseline}
+.lnm .sym{color:var(--amber-hi)}
+.lnm .hl{color:var(--muted);font-size:10px;display:block;margin-top:2px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:1100px){ #lnRail{flex-basis:210px} }
+
+/* ---- world map ---- */
+#worldWrap{flex:1;position:relative;min-height:0}
+#world{display:block;width:100%;height:100%}
+
+/* ---- ADR grid (same shape as the screener) ---- */
+.gridhead{display:flex;flex:0 0 auto;background:#100c03;
+  border-bottom:1px solid var(--line-hi);height:20px;align-items:center;
+  overflow:hidden}
+.gridhead div{color:var(--amber);padding:0 5px;flex:0 0 auto;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;letter-spacing:.04em}
+#adrWrap{flex:1;overflow:auto;position:relative}
+#adrSpacer{position:relative}
+
+/* ---- ticker view ---- */
+#tk{flex:1;display:flex;min-height:0}
+#tkLeft{flex:1;min-width:0;display:flex;flex-direction:column}
+#tkHead{padding:5px 9px;border-bottom:1px solid var(--line);flex:0 0 auto;
+  display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+#tkSym{font-size:19px;color:var(--amber);letter-spacing:.05em}
+#tkName{color:var(--muted);flex:1;min-width:0;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+#tkPx{font-size:19px} #tkChg{font-size:13px}
+#ranges{display:flex;gap:0;padding:2px 8px;border-bottom:1px solid var(--line);
+  flex:0 0 auto;background:var(--panel2)}
+#ranges button{background:transparent;border:1px solid transparent;
+  color:var(--amber-dim);font:inherit;padding:0 9px;cursor:pointer}
+#ranges button:hover{color:var(--amber-hi)}
+#ranges button.on{background:var(--amber);color:#000}
+#chartWrap{flex:1;position:relative;min-height:0}
+#chart{display:block;width:100%;height:100%}
+#tkRight{width:268px;flex:0 0 268px;border-left:1px solid var(--line);
+  overflow-y:auto;background:var(--panel)}
+.sect{padding:3px 8px;background:#150f04;color:var(--amber);
+  border-bottom:1px solid var(--line);border-top:1px solid var(--line);
+  letter-spacing:.1em}
+.kv{display:flex;justify-content:space-between;padding:1px 8px;gap:8px}
+.kv span:first-child{color:var(--muted)}
+.kv span:last-child{text-align:right;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap}
+#rangeBar{margin:7px 8px;height:5px;background:#1a1a1a;position:relative;
+  border:1px solid var(--line)}
+#rangeDot{position:absolute;top:-3px;width:2px;height:9px;background:var(--amber)}
+.filing{display:flex;gap:10px;padding:2px 9px;color:var(--amber-dim);
+  text-decoration:none;border-bottom:1px solid #100c04}
+.filing:hover{background:#1c1405;color:var(--amber-hi)}
+.filing .fdate{width:86px;flex:0 0 86px;color:var(--text)}
+.filing .fform{width:60px;flex:0 0 60px;color:var(--amber)}
+
+/* ---- saved screens ---- */
+#saved{flex:1;overflow-y:auto;padding:6px 10px}
+.sv{display:flex;gap:10px;align-items:center;padding:3px 6px;cursor:pointer;
+  border-bottom:1px solid #120d04}
+.sv:hover{background:#1c1405}
+.sv b{color:var(--amber);font-weight:400;min-width:150px}
+.sv code{color:var(--muted);flex:1;min-width:0;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.sv .x{color:var(--red);padding:0 5px}
+h3.hd{color:var(--amber);letter-spacing:.12em;margin:12px 0 4px}
+
+/* ---- command line ---- */
+#cmd{display:flex;align-items:center;gap:7px;height:24px;padding:0 9px;
+  border-top:1px solid var(--line-hi);background:linear-gradient(#000,#120d03);
+  flex:0 0 auto}
+#prompt{color:var(--amber);font-weight:700}
+#cmdIn{flex:1;background:transparent;border:0;outline:none;color:var(--amber-hi);
+  font:inherit;letter-spacing:.03em}
+#cmdIn::placeholder{color:#5a4a2a}
+#keys{color:var(--muted);white-space:nowrap;letter-spacing:.05em}
+#msg{color:var(--amber-hi);white-space:nowrap;max-width:44%;overflow:hidden;
+  text-overflow:ellipsis}
+#msg.err{color:var(--red)}
+
+/* ---- refresh progress ---- */
+#prog{position:fixed;left:0;right:0;bottom:24px;height:2px;background:#1a1204;
+  display:none;z-index:20}
+#progBar{height:100%;width:0;background:var(--amber);transition:width .25s}
+
+/* ---- article reader ---- */
+#reader{position:fixed;inset:0;background:rgba(0,0,0,.93);z-index:40;
+  display:none;padding:26px}
+#reader .box{max-width:800px;margin:0 auto;border:1px solid var(--amber);
+  background:#050403;height:100%;display:flex;flex-direction:column}
+#rdHead{display:flex;align-items:center;gap:12px;padding:7px 14px;flex:0 0 auto;
+  border-bottom:1px solid var(--line-hi);background:#120d03}
+#rdTitle{color:var(--amber);font-size:13px;flex:1;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#rdMeta{white-space:nowrap}
+#rdHead a.hdr{text-decoration:none;line-height:15px}
+#rdBody{flex:1;overflow-y:auto;padding:14px 20px 26px;
+  font-family:Georgia,"Times New Roman",serif;font-size:14px;line-height:1.72;
+  color:#d9cfbc}
+#rdBody p{margin-bottom:13px}
+#rdBody .note{font-family:Consolas,monospace;font-size:11px;color:var(--muted);
+  border-left:2px solid var(--line-hi);padding-left:9px;margin-bottom:14px}
+
+/* ---- help ---- */
+#help{position:fixed;inset:0;background:rgba(0,0,0,.93);z-index:30;display:none;
+  padding:36px;overflow:auto}
+#help .box{max-width:860px;margin:0 auto;border:1px solid var(--amber);
+  background:#050403;padding:16px 20px}
+#help h2{color:var(--amber);letter-spacing:.16em;font-size:13px;
+  font-weight:400;margin-bottom:10px}
+#help table{border-collapse:collapse;width:100%;margin-bottom:12px}
+#help td{padding:1px 10px 1px 0;vertical-align:top}
+#help td:first-child{color:var(--amber-hi);white-space:nowrap;width:210px}
+</style>
+</head>
+<body>
+
+<div id="top">
+  <span class="zone">
+    <span id="brand">QUANTPILOT</span>
+    <span id="clock">--:--:--</span>
+  </span>
+  <span class="zone">
+    <span class="badge" id="stateBadge">CONNECTING</span>
+    <span class="badge" id="lagBadge">LAG --</span>
+    <span class="badge" id="streamBadge">POLL</span>
+  </span>
+  <span class="zone" id="zoneTools">
+    <span class="badge" id="alertBell"
+          title="alert me when something enters a saved screen">ALERTS</span>
+    <span id="searchWrap">
+      <input id="search" autocomplete="off" spellcheck="false"
+             placeholder="search ticker or company…">
+      <div id="searchDrop"></div>
+    </span>
+    <span id="dataInfo"
+          title="snapshot age, and when the running code was built">
+      <span id="snapInfo">no snapshot</span>
+      <span id="buildInfo"></span>
+    </span>
+    <button class="hdr" id="refreshBtn">REFRESH</button>
+  </span>
+</div>
+
+<div id="tape">
+  <div id="strip"><span class="dim" style="padding:0 10px">loading…</span></div>
+  <div id="futures"></div>
+</div>
+
+<div id="main">
+  <div id="rail">
+    <div class="tab on" data-view="screen"><b>F2</b>SCRN</div>
+    <div class="tab" data-view="map"><b>F3</b>HEAT</div>
+    <div class="tab" data-view="ticker"><b>F4</b>CHRT</div>
+    <div class="tab" data-view="saved"><b>F5</b>SAVE</div>
+    <div class="tab" data-view="world"><b>F6</b>WRLD</div>
+    <div class="tab" data-view="adr"><b>F7</b>ADR</div>
+    <div class="tab" data-view="earnings"><b>F8</b>EARN</div>
+    <div class="tab" data-view="news"><b>F9</b>NEWS</div>
+    <div class="tab" data-view="livenews"><b>F10</b>LIVE</div>
+    <div class="tab" data-view="help"><b>F1</b>HELP</div>
+  </div>
+
+  <div id="views">
+    <!-- screener -->
+    <div class="view on" id="view-screen">
+      <div id="filters"></div>
+      <div id="chips"><span id="count">—</span></div>
+      <div id="gridHead"></div>
+      <div id="screenBody">
+        <div id="gridWrap"><div id="gridSpacer"></div><div id="empty"></div></div>
+        <div id="watchPanel">
+          <div class="sect">WATCH <span id="watchNote" class="dim"></span></div>
+          <div id="watchRows"></div>
+          <div class="dim" style="padding:5px 8px;line-height:1.6">
+            <span class="amber">W</span> on any row adds or removes ·
+            click to open · <span class="amber">X</span> to drop
+          </div>
+        </div>
+      </div>
+      <div id="cstrip">
+        <div id="csLine1"></div>
+        <div id="csLine2"></div>
+      </div>
+    </div>
+
+    <!-- heatmap -->
+    <div class="view" id="view-map">
+      <div id="mapBar">
+        <span class="vtitle">HEATMAP</span><span class="dim">SIZE</span><span class="amber">market cap</span>
+        <span class="dim">COLOR</span><span class="amber">% change</span>
+        <span class="dim">·</span>
+        <span class="dim">TOP</span>
+        <select id="mapCount">
+          <option>200</option><option selected>400</option>
+          <option>800</option><option>1500</option>
+        </select>
+        <span id="mapBreadth" class="vstatus"></span>
+      </div>
+      <div id="mapWrap"><canvas id="map"></canvas><div id="mapTip"></div></div>
+    </div>
+
+    <!-- ticker -->
+    <div class="view" id="view-ticker">
+      <div id="tk">
+        <div id="tkLeft">
+          <div id="tkHead">
+            <span id="tkSym">—</span>
+            <span id="tkPx">—</span>
+            <span id="tkChg"></span>
+            <span id="tkExt" style="display:none"></span>
+            <span id="tkName"></span>
+          </div>
+          <div id="ranges"></div>
+          <div id="chartWrap"><canvas id="chart"></canvas>
+            <div id="cmpBox">
+              <span class="dim">vs</span>
+              <input id="cmpSym" spellcheck="false" placeholder="SPY">
+              <button class="act" id="cmpClear">×</button>
+            </div>
+          </div>
+          <div id="tkTabs">
+            <span class="tkTab on" data-pane="news">NEWS</span>
+            <span class="tkTab" data-pane="rel">RELATED</span>
+            <span class="tkTab" data-pane="filings">FILINGS</span>
+            <span id="paneNote" class="dim"></span>
+            <label class="dim" id="strictWrap">
+              <input type="checkbox" id="newsStrict"> only tagged
+            </label>
+          </div>
+          <div id="tkPanes">
+            <div id="newsList" class="pane on"></div>
+            <div id="relList" class="pane"></div>
+            <div id="filingList" class="pane"></div>
+          </div>
+        </div>
+        <div id="tkRight"></div>
+      </div>
+    </div>
+
+    <!-- world map -->
+    <div class="view" id="view-world">
+      <div id="mapBar">
+        <span class="vtitle">WORLD</span><span class="dim">LAYOUT</span>
+        <button class="act on" id="wBubbles">BUBBLES</button>
+        <button class="act" id="wTiles">TILES</button>
+        <span class="dim">·</span>
+        <span class="dim">SCOPE</span>
+        <button class="act on" id="wAll">ALL</button>
+        <button class="act" id="wAdr">ADR ONLY</button>
+        <span class="dim">·</span>
+        <span class="dim">size</span><span class="amber">market cap</span>
+        <span class="dim">colour</span><span class="amber">avg change</span>
+        <span id="wNote" class="vstatus"></span>
+      </div>
+      <div id="worldWrap"><canvas id="world"></canvas><div id="worldTip"></div></div>
+    </div>
+
+    <!-- ADR -->
+    <div class="view" id="view-adr">
+      <div id="mapBar">
+        <span class="vtitle">ADR</span>
+        <span class="dim">foreign companies listed in the US</span>
+        <span class="dim">Country</span>
+        <select id="adrCountry"><option>Any</option></select>
+        <span class="dim">Sort</span>
+        <select id="adrSort">
+          <option value="market_cap">Market cap</option>
+          <option value="change_pct">Change %</option>
+          <option value="volume">Volume</option>
+          <option value="rel_volume">Rel volume</option>
+        </select>
+        <span id="adrNote" class="vstatus"></span>
+      </div>
+      <div id="adrHead" class="gridhead"></div>
+      <div id="adrWrap"><div id="adrSpacer"></div></div>
+    </div>
+
+    <!-- earnings -->
+    <div class="view" id="view-earnings">
+      <div id="mapBar">
+        <span class="vtitle">EARNINGS</span><span class="dim">WINDOW</span>
+        <select id="earnDays">
+          <option value="3">3 days</option>
+          <option value="7" selected>7 days</option>
+          <option value="14">14 days</option>
+          <option value="30">30 days</option>
+        </select>
+        <span class="dim">MIN CAP</span>
+        <select id="earnCap">
+          <option value="0">Any</option>
+          <option value="1000000000">$1B</option>
+          <option value="10000000000" selected>$10B</option>
+          <option value="50000000000">$50B</option>
+          <option value="200000000000">$200B</option>
+        </select>
+        <span class="dim">·</span>
+        <span class="dim">BMO before the open · AMC after the close</span>
+        <span id="earnNote" class="vstatus"></span>
+      </div>
+      <div id="earnWrap"></div>
+    </div>
+
+    <!-- market news -->
+    <div class="view" id="view-news">
+      <div id="mapBar">
+        <span class="vtitle">NEWS</span>
+        <span class="dim">ranked by how recent it is and how hard the
+          stock it names is moving</span>
+        <button class="act" id="newsRefresh">REFRESH</button>
+        <span id="mktNewsNote" class="vstatus"></span>
+      </div>
+      <div id="mktMovers"></div>
+      <div id="mktNews"></div>
+    </div>
+
+    <!-- live news -->
+    <div class="view" id="view-livenews">
+      <div id="mapBar">
+        <span class="vtitle">LIVE NEWS</span>
+        <span class="dim">US finance networks, embedded from their own
+          channels</span>
+        <button class="act" id="lnRefresh">REFRESH</button>
+        <span id="lnNote" class="vstatus"></span>
+      </div>
+      <div id="lnWrap">
+        <div id="lnMain">
+          <div id="lnChannels"></div>
+          <div id="lnPlayer"><div id="lnEmpty" class="dim">checking who is
+            on air…</div></div>
+        </div>
+        <div id="lnRail">
+          <div id="lnRailHead">IN THE HEADLINES
+            <span class="dim" id="lnRailNote"></span></div>
+          <div id="lnMentions"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- saved -->
+    <div class="view" id="view-saved"><div id="saved"></div></div>
+  </div>
+</div>
+
+<div id="cmd">
+  <span id="prompt">&gt;</span>
+  <input id="cmdIn" autocomplete="off" spellcheck="false"
+         placeholder="ticker, or  screen mcap>10b and chg>3 and relvol>2   —  type help">
+  <span id="msg"></span>
+  <span id="keys">F1 HELP · F2 SCRN · F3 HEAT · F4 CHRT · F5 SAVE · F6 WRLD · F7 ADR · F8 EARN · F9 NEWS · F10 LIVE</span>
+</div>
+
+<div id="prog"><div id="progBar"></div></div>
+
+<div id="reader"><div class="box">
+  <div id="rdHead">
+    <span id="rdTitle">—</span>
+    <span id="rdMeta" class="dim"></span>
+    <a id="rdLink" class="hdr" target="_blank" rel="noopener" href="#">OPEN ORIGINAL</a>
+    <button class="hdr" id="rdClose">CLOSE ✕</button>
+  </div>
+  <div id="rdBody"></div>
+</div></div>
+
+<div id="help"><div class="box">
+  <h2>QUANTPILOT — COMMAND REFERENCE</h2>
+  <table>
+    <tr><td>NVDA</td><td>open the ticker view for a symbol</td></tr>
+    <tr><td>screen &lt;expression&gt;</td><td>run a screen (also: <code>s &lt;expr&gt;</code>, or just type an expression)</td></tr>
+    <tr><td>save &lt;name&gt;</td><td>save the current screen</td></tr>
+    <tr><td>load &lt;name&gt;</td><td>run a saved screen</td></tr>
+    <tr><td>del &lt;name&gt;</td><td>delete a saved screen</td></tr>
+    <tr><td>clear</td><td>reset every filter</td></tr>
+    <tr><td>refresh</td><td>rebuild the universe snapshot</td></tr>
+    <tr><td>scrn / heat / map / chart / adr / saved</td><td>switch view</td></tr>
+    <tr><td>earn</td><td>earnings calendar — who reports, and whether before the open or after the close</td></tr>
+    <tr><td>news</td><td>market news, ranked by how hot it is</td></tr>
+    <tr><td>news SYMBOL</td><td>stories for one company — also shown under its chart</td></tr>
+    <tr><td>find SYMBOL</td><td>search tickers and companies</td></tr>
+    <tr><td>vs SYMBOL</td><td>overlay another stock on the chart, normalised to %</td></tr>
+    <tr><td>alerts</td><td>notify me when something enters a saved screen</td></tr>
+    <tr><td>watch [SYMBOL]</td><td>add or remove from the watchlist; bare toggles the panel</td></tr>
+    <tr><td>adr</td><td>American Depositary Receipts — foreign companies listed in the US</td></tr>
+    <tr><td>map</td><td>world map: size is market cap, colour is average change</td></tr>
+  </table>
+  <h2>EXPRESSIONS</h2>
+  <table>
+    <tr><td>mcap &gt; 10b and chg &gt; 3</td><td>suffixes k / m / b / t work everywhere</td></tr>
+    <tr><td>2 &lt; pe &lt; 30</td><td>chained comparisons read as you'd expect</td></tr>
+    <tr><td>sector == "Energy"</td><td>text compares are case-insensitive</td></tr>
+    <tr><td>sector in ("Energy","Finance")</td><td>membership</td></tr>
+    <tr><td>"semi" in industry</td><td>substring search</td></tr>
+    <tr><td>price / sma50 &gt; 1.05</td><td>arithmetic between fields</td></tr>
+    <tr><td>relvol &gt; 2 and vol &gt; 1m</td><td>and · or · not</td></tr>
+    <tr><td>adr and country == "China"</td><td>ADRs — <code>adr</code> is true/false, use it bare</td></tr>
+    <tr><td>extchg &gt; 5</td><td>pre-market, after-hours and overnight moves</td></tr>
+    <tr><td>rs &gt; 3</td><td>beating its own sector by 3% — different from "up 3%"</td></tr>
+    <tr><td>dvol &gt; 100m</td><td>dollar volume traded today — <code>avgdvol</code> for the normal day</td></tr>
+    <tr><td>dayrange &gt; 90</td><td>closing on the high — 0 at the day's low, 100 at its high</td></tr>
+  </table>
+  <h2>FIELDS</h2>
+  <div id="fieldList" class="dim" style="line-height:1.7"></div>
+  <h2>KEYS</h2>
+  <table>
+    <tr><td>/</td><td>focus the search box</td></tr>
+    <tr><td>&gt;</td><td>focus the command line</td></tr>
+    <tr><td>F1–F5</td><td>switch view</td></tr>
+    <tr><td>Esc</td><td>close this / leave the command line</td></tr>
+    <tr><td>↑ ↓ in the command line</td><td>command history</td></tr>
+    <tr><td>↑ ↓ in the grid</td><td>move the cursor · Enter opens · W watchlists</td></tr>
+    <tr><td>PgUp PgDn Home End</td><td>move through the grid faster</td></tr>
+  </table>
+  <p class="dim">Quotes come from Yahoo's undocumented endpoints and the Nasdaq
+  screener. Delay is measured per response and shown in the header — this
+  terminal never claims live over stale data.</p>
+  <!-- AGPL section 13: software reachable over a network has to offer its
+       users the source. This is that offer, and the licence is the reason
+       it exists rather than being decoration. -->
+  <p class="dim">QuantPilot is free software under the
+  <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank"
+     rel="noopener" class="amber">GNU AGPL-3.0</a> — no warranty, express or
+  implied. Source:
+  <a href="https://github.com/Ben05-sys/QuantPilot" target="_blank"
+     rel="noopener" class="amber">github.com/Ben05-sys/QuantPilot</a></p>
+</div></div>
+
+<script>
+"use strict";
+const TOKEN = window.PM_TOKEN || "";
+const PAGE_LOADED_AT = Date.now();
+
+/* ---------- api ---------- */
+async function api(path, opts){
+  const o = Object.assign({headers:{}}, opts||{});
+  o.headers["X-PM-Token"] = TOKEN;
+  if(o.body){ o.headers["Content-Type"]="application/json";
+              o.body = JSON.stringify(o.body); o.method = o.method||"POST"; }
+  const r = await fetch(path, o);
+  let j = null;
+  try{ j = await r.json(); }catch(e){ j = {error:"bad response from server"}; }
+  if(!r.ok) throw new Error((j && j.error) || ("HTTP "+r.status));
+  return j;
+}
+
+/* ---------- formatting ---------- */
+const nf = (v,d=2)=> (v===null||v===undefined||Number.isNaN(v)) ? "" : v.toFixed(d);
+function fcap(v){
+  if(v===null||v===undefined) return "";
+  const a=Math.abs(v);
+  if(a>=1e12) return (v/1e12).toFixed(2)+"T";
+  if(a>=1e9)  return (v/1e9).toFixed(2)+"B";
+  if(a>=1e6)  return (v/1e6).toFixed(1)+"M";
+  if(a>=1e3)  return (v/1e3).toFixed(1)+"K";
+  return v.toFixed(0);
+}
+function fvol(v){
+  if(v===null||v===undefined) return "";
+  const a=Math.abs(v);
+  if(a>=1e9) return (v/1e9).toFixed(2)+"B";
+  if(a>=1e6) return (v/1e6).toFixed(1)+"M";
+  if(a>=1e3) return (v/1e3).toFixed(0)+"K";
+  return String(Math.round(v));
+}
+function fpct(v,d=2){
+  if(v===null||v===undefined) return "";
+  return (v>0?"+":"")+v.toFixed(d)+"%";
+}
+const cls = v => v===null||v===undefined ? "flat" : v>0 ? "up" : v<0 ? "dn" : "flat";
+const esc = s => String(s===null||s===undefined?"":s)
+  .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
+/* ---------- state ---------- */
+const S = {
+  view:"screen", expr:"", filters:{}, sort:"market_cap", dir:"desc",
+  rows:[], total:0, universe:0, sel:null,
+  symbol:null, range:"1y", interval:"1d", ticker:null,
+  status:{}, tickTimer:null, history:[], hpos:-1, cells:[], mapRects:[],
+  stream:{available:false, healthy:false, connected:false, subscribed:0},
+  // symbol -> when this row last got a price, by stream or by poll.
+  tickAt:{},
+};
+
+/* ---------- grid layout ---------- */
+const COLS = [
+  // A dot marks what's on the watchlist, so the grid and the panel agree
+  // at a glance without a whole extra column.
+  {k:"symbol",           t:"TICKER", w:62,
+   f:v=>(S.watch.symbols.has(v)?'<span class="amber">•</span>':"")+esc(v)},
+  {k:"name",             t:"COMPANY",w:196, f:v=>esc(v)},
+  {k:"price",            t:"LAST",   w:70,  n:1, f:v=>nf(v,2)},
+  {k:"change_pct",       t:"CHG%",   w:64,  n:1, f:v=>fpct(v), color:1},
+  {k:"ext_change_pct",   t:"EXT%",   w:62,  n:1, f:v=>fpct(v), color:1},
+  {k:"rs_sector",        t:"RS",     w:56,  n:1, f:v=>nf(v,1), color:1},
+  {k:"volume",           t:"VOLUME", w:70,  n:1, f:fvol},
+  {k:"rel_volume",       t:"RVOL",   w:52,  n:1, f:v=>nf(v,2)},
+  {k:"market_cap",       t:"MKT CAP",w:74,  n:1, f:fcap},
+  {k:"pe",               t:"P/E",    w:56,  n:1, f:v=>nf(v,1)},
+  {k:"dividend_yield",   t:"DIV%",   w:50,  n:1, f:v=>nf(v,2)},
+  {k:"pct_from_52w_high",t:"52WH%",  w:58,  n:1, f:v=>nf(v,1), color:1},
+  {k:"pct_from_sma50",   t:"SMA50%", w:58,  n:1, f:v=>nf(v,1), color:1},
+  {k:"sector",           t:"SECTOR", w:122, f:v=>esc(v)},
+  {k:"industry",         t:"INDUSTRY",w:190,f:v=>esc(v)},
+];
+const ROW_H = 19;
+const GRID_W = COLS.reduce((a,c)=>a+c.w, 0);
+
+function buildHead(){
+  const h = document.getElementById("gridHead");
+  h.innerHTML = COLS.map(c=>{
+    const on = S.sort===c.k;
+    const arrow = on ? (S.dir==="desc"?" ▾":" ▴") : "";
+    return `<div data-k="${c.k}" style="width:${c.w}px;${c.n?"text-align:right":""}">`
+         + (on?`<span style="color:var(--amber-hi)">${c.t}${arrow}</span>`:c.t)
+         + `</div>`;
+  }).join("");
+  h.querySelectorAll("div[data-k]").forEach(d=>{
+    d.onclick = ()=>{
+      const k = d.dataset.k;
+      if(S.sort===k) S.dir = S.dir==="desc" ? "asc" : "desc";
+      else { S.sort = k; S.dir = (k==="symbol"||k==="name"||k==="sector"
+                                  ||k==="industry") ? "asc" : "desc"; }
+      buildHead(); saveUi(); runScreen();
+    };
+  });
+}
+
+/* ---------- virtualized grid ----------
+   7,000 rows must never become 7,000 DOM nodes: only the visible window
+   is rendered, absolutely positioned inside a spacer of the full height. */
+const wrap = document.getElementById("gridWrap");
+const spacer = document.getElementById("gridSpacer");
+let renderedFrom = -1, renderedTo = -1;
+
+function drawRows(force){
+  const total = S.rows.length;
+  spacer.style.height = (total*ROW_H)+"px";
+  spacer.style.width = GRID_W+"px";
+  const top = wrap.scrollTop, h = wrap.clientHeight;
+  const from = Math.max(0, Math.floor(top/ROW_H)-8);
+  const to   = Math.min(total, Math.ceil((top+h)/ROW_H)+8);
+  if(!force && from===renderedFrom && to===renderedTo) return;
+  renderedFrom = from; renderedTo = to;
+  const out = [];
+  for(let i=from;i<to;i++){
+    const r = S.rows[i];
+    const marks = (S.cursor===i ? " cur" : "")
+                + (S.hover===i ? " hov" : "")
+                + (S.sel===r.symbol ? " sel" : "")
+                + (S.watch.symbols.has(r.symbol) ? " watched" : "");
+    out.push(`<div class="r${marks}" data-i="${i}" `
+           + `data-sym="${esc(r.symbol)}" `
+           + `style="top:${i*ROW_H}px;width:${GRID_W}px">`);
+    for(const c of COLS){
+      const v = r[c.k];
+      const color = c.color ? " "+cls(v) : "";
+      out.push(`<div class="${c.n?"num":""}${color}" data-c="${c.k}" `
+             + `style="width:${c.w}px">${c.f(v)}</div>`);
+    }
+    out.push(`</div>`);
+  }
+  // Keep the spacer, replace the rows.
+  spacer.innerHTML = out.join("");
+}
+wrap.addEventListener("scroll", ()=>{
+  drawRows(false);
+  // The header is outside the scroller so it can stay pinned vertically;
+  // it has to be dragged along horizontally by hand.
+  document.getElementById("gridHead").scrollLeft = wrap.scrollLeft;
+  syncSubscription();
+});
+spacer.addEventListener("click", e=>{
+  const row = e.target.closest(".r");
+  if(row) openTicker(row.dataset.sym);
+});
+window.addEventListener("resize", ()=>{ drawRows(true); sizeCanvases(); });
+
+/* ---------- cursor detail strip ----------
+   Four numbers decide whether a mover is worth anything: how much traded,
+   how that compares with a normal day *by this hour*, what it came to in
+   dollars, and where in the day's range the price is sitting. None of them
+   earns a permanent column — fifteen columns is already a lot to read
+   across — so they live down here for whichever row the cursor or the
+   mouse is on.
+
+   Everything is recomputed from the row's ticking price and volume rather
+   than read from a server field, so the strip can never disagree with the
+   line it is describing. */
+const strip1 = document.getElementById("csLine1");
+const strip2 = document.getElementById("csLine2");
+S.hover = -1;
+
+const has = v => v!==null && v!==undefined && !Number.isNaN(v);
+
+function fmoney(v){
+  if(!has(v)) return "—";
+  const a=Math.abs(v), s=v<0?"-$":"$";
+  if(a>=1e12) return s+(a/1e12).toFixed(2)+"T";
+  if(a>=1e9)  return s+(a/1e9).toFixed(2)+"B";
+  if(a>=1e6)  return s+(a/1e6).toFixed(1)+"M";
+  if(a>=1e3)  return s+(a/1e3).toFixed(0)+"K";
+  return s+a.toFixed(0);
+}
+function kv(label, value, extra){
+  return `<span class="k">${label}</span>`
+       + `<span class="v${extra?" "+extra:""}">&nbsp;${value}</span>`;
+}
+
+/* How much of a normal session should have traded by now. The server
+   already decided this — and it alone knows whether the venue calls the
+   session regular, which the browser's clock cannot tell you on a holiday
+   — so it is read back out of the two relative-volume figures rather than
+   guessed at. The server computes rel_volume = rel_volume_raw / fraction,
+   so the fraction is the ratio the other way up. */
+function paceFraction(r){
+  return (has(r.rel_volume) && has(r.rel_volume_raw) && r.rel_volume > 0)
+       ? r.rel_volume_raw / r.rel_volume : 1;
+}
+
+function stripDetail(r){
+  const dvol = (has(r.price) && has(r.volume)) ? r.price * r.volume : null;
+  const avgDvol = (has(r.price) && has(r.avg_volume_3m))
+                ? r.price * r.avg_volume_3m : null;
+  const raw = (has(r.volume) && has(r.avg_volume_3m) && r.avg_volume_3m > 0)
+            ? r.volume / r.avg_volume_3m : null;
+  const frac = paceFraction(r);
+  const pace = has(raw) && frac > 0 ? raw / frac : null;
+  // A tick can print through the day's high before the snapshot's high
+  // catches up, so the position is clamped: 100 means "at the high of the
+  // day", which is exactly what a print above the old high is.
+  let pos = null;
+  const span = (has(r.day_high) && has(r.day_low)) ? r.day_high - r.day_low : 0;
+  if(has(r.price) && span > 0)
+    pos = Math.max(0, Math.min(100, (r.price - r.day_low) / span * 100));
+  return {dvol, avgDvol, pace, pos, span};
+}
+
+function paintStrip(){
+  const i = S.hover>=0 ? S.hover : S.cursor;
+  const r = (i>=0 && S.rows[i]) ? S.rows[i] : null;
+  if(!r){
+    strip1.innerHTML = `<span class="dim">↑ ↓ or hover a row — volume, `
+      + `pace against a normal day, dollar volume, day range</span>`;
+    strip2.innerHTML = "";
+    return;
+  }
+  const d = stripDetail(r);
+  strip1.innerHTML =
+      `<span class="sy">${esc(r.symbol)}</span>`
+    + `<span class="v" style="margin-left:9px">${nf(r.price,2)}</span>`
+    + `<span class="${cls(r.change_pct)}" style="margin-left:6px">`
+    + `${fpct(r.change_pct)}</span>`
+    + `<span class="sep">│</span>`
+    + kv("VOL", fvol(r.volume) || "—")
+    + kv("AVG", fvol(r.avg_volume_3m) || "—")
+    // The one figure a raw volume can't give you: 38M shares is heavy for
+    // one name and a quiet morning for another, and at 10am it is a fifth
+    // of a day either way.
+    + kv("PACE", has(d.pace) ? Math.round(d.pace*100)+"% of normal" : "—",
+         has(d.pace) ? (d.pace>=1.5?"up":d.pace<0.6?"dn":"") : "")
+    + `<span class="sep">│</span>`
+    + kv("TRADED", fmoney(d.dvol))
+    + kv("TYPICAL", fmoney(d.avgDvol));
+
+  if(!(d.span > 0)){
+    strip2.innerHTML = `<span class="k first">DAY</span>`
+      + `<span class="v">&nbsp;no range yet</span>`;
+    return;
+  }
+  const open = has(r.open)
+             ? Math.max(0, Math.min(100, (r.open - r.day_low) / d.span * 100))
+             : null;
+  strip2.innerHTML =
+      `<span class="k first">DAY</span>`
+    + `<span class="v">&nbsp;${nf(r.day_low,2)}</span>`
+    + `<div id="csBar">`
+    +   `<div id="csFill" style="width:${d.pos.toFixed(1)}%"></div>`
+    +   (open!==null ? `<div id="csOpen" style="left:${open.toFixed(1)}%"></div>` : "")
+    +   `<div id="csDot" style="left:${d.pos.toFixed(1)}%"></div>`
+    + `</div>`
+    + `<span class="v">${nf(r.day_high,2)}</span>`
+    + `<span class="v pos" style="margin-left:7px">${Math.round(d.pos)}%</span>`
+    + `<span class="sep">│</span>`
+    + kv("OPEN", nf(r.open,2) || "—")
+    + kv("PREV", nf(r.prev_close,2) || "—")
+    + kv("RANGE", nf(d.span,2) + " ("
+        + (has(r.prev_close) && r.prev_close>0
+           ? nf(d.span / r.prev_close * 100, 1)+"%" : "—") + ")");
+}
+
+/* Hover beats the cursor while the mouse is in the grid, so the strip is
+   useful without touching the keyboard, then hands back when the mouse
+   leaves. */
+function setHover(i){
+  if(i===S.hover) return;
+  const old = spacer.querySelector(".r.hov");
+  if(old) old.classList.remove("hov");
+  S.hover = i;
+  if(i>=0){
+    const el = spacer.querySelector(`.r[data-i="${i}"]`);
+    if(el) el.classList.add("hov");
+  }
+  paintStrip();
+}
+spacer.addEventListener("mousemove", e=>{
+  const row = e.target.closest(".r");
+  setHover(row ? Number(row.dataset.i) : -1);
+});
+wrap.addEventListener("mouseleave", ()=>setHover(-1));
+
+/* ---------- screener ---------- */
+/* Two passes. The snapshot answer comes back in ~20ms and goes on screen
+   immediately; the live-priced answer takes up to a second and a half
+   because it re-quotes every candidate, and waiting for it means staring
+   at nothing. So rows appear at once and are replaced when the accurate
+   answer lands. The count line says which one you are looking at. */
+let screenSeq = 0;
+
+async function runScreen(quiet){
+  const seq = ++screenSeq;
+  const base = {expr:S.expr, filters:JSON.stringify(S.filters), sort:S.sort,
+                dir:S.dir, limit:"2000", offset:"0"};
+  const fast = api("/api/screen?"+new URLSearchParams({...base, live:"0"}));
+  const live = api("/api/screen?"+new URLSearchParams(base));
+  try{
+    const first = await fast;
+    // A newer screen started while this one was in flight.
+    if(seq !== screenSeq) return;
+    paintScreen(first, quiet);
+  }catch(e){ /* the live pass may still succeed */ }
+  try{
+    const d = await live;
+    if(seq !== screenSeq) return;
+    // Nothing to redraw if the fast pass already gave the same answer.
+    if(d.priced !== "static") paintScreen(d, true);
+  }catch(e){ say(e.message, true); }
+}
+
+function paintScreen(d, quiet){
+  {
+    S.rows = d.rows; S.total = d.total; S.universe = d.universe||0;
+    // The server compiles dropdowns + typed text into one expression and
+    // hands it back; `save` stores exactly what the grid is showing.
+    S.lastExpr = d.expr || "";
+    renderedFrom = renderedTo = -1;
+    if(!quiet) wrap.scrollTop = 0;
+    // A new result set means row 12 is a different company, and both
+    // pointers are indices — so a fresh screen drops them rather than
+    // silently re-aiming. The quiet repaint is the *same* screen arriving
+    // with live prices, where dropping them would yank the strip out from
+    // under a mouse that hasn't moved.
+    if(!quiet){ S.hover = -1; S.cursor = -1; }
+    drawRows(true);
+    paintStrip();
+    const shown = S.rows.length;
+    // Say plainly which prices the *selection* was made on. A screen run
+    // against a stale snapshot is a question about the past, and the count
+    // line is where that has to be admitted.
+    const priced = {
+      live: `· priced live (${(d.candidates||0).toLocaleString()} quoted)`,
+      // The fast pass. Says so, and the live answer is on its way.
+      pending: "· snapshot prices — re-pricing…",
+      snapshot: `· ⚠ filtered on snapshot prices — too many candidates `
+                + `(${(d.candidates||0).toLocaleString()}) to re-price`,
+      static: "",
+    }[d.priced] || "";
+    document.getElementById("count").textContent =
+      d.empty ? "no snapshot yet" :
+      `${shown.toLocaleString()} shown / ${S.total.toLocaleString()} matched `
+      + `/ ${S.universe.toLocaleString()} universe`
+      + (S.total>shown ? "  · narrow the filter to see the rest" : "")
+      + (priced ? "  " + priced : "");
+    document.getElementById("count").className = d.priced==="snapshot" ? "warn" : "";
+    const chips = document.getElementById("chips");
+    [...chips.querySelectorAll(".chip")].forEach(c=>c.remove());
+    (d.chips||[]).slice().reverse().forEach(t=>{
+      const s=document.createElement("span");
+      s.className="chip"; s.textContent=t;
+      chips.insertBefore(s, chips.firstChild);
+    });
+    const em = document.getElementById("empty");
+    em.style.display = shown ? "none" : "block";
+    em.textContent = d.empty
+      ? "No universe snapshot yet — press REFRESH to build one."
+      : "Nothing matched. Loosen a filter.";
+    lastSub = "";           // new rows, so the subscription must change
+    syncSubscription();
+    tickNow();
+  }
+}
+
+function buildFilters(specs){
+  const bar = document.getElementById("filters");
+  bar.innerHTML = specs.map(f=>
+    `<label class="fl"><span>${esc(f.label)}</span>`
+    + `<select data-f="${esc(f.id)}">`
+    + f.options.map(o=>`<option>${esc(o)}</option>`).join("")
+    + `</select></label>`).join("")
+    + `<button class="act" id="clearBtn">CLEAR</button>`;
+  bar.querySelectorAll("select[data-f]").forEach(sel=>{
+    sel.onchange = ()=>{
+      const v = sel.value;
+      if(v==="Any"){ delete S.filters[sel.dataset.f]; sel.classList.remove("set"); }
+      else { S.filters[sel.dataset.f]=v; sel.classList.add("set"); }
+      saveUi();
+      runScreen();
+      if(S.view==="map") loadMap();
+      if(S.view==="world") loadWorld();
+    };
+  });
+  document.getElementById("clearBtn").onclick = clearAll;
+}
+
+function clearAll(){
+  S.filters = {}; S.expr = "";
+  document.querySelectorAll("#filters select").forEach(s=>{
+    s.value="Any"; s.classList.remove("set");
+  });
+  runScreen(); say("filters cleared");
+}
+
+/* ---------- live tick ----------
+   Only the rows on screen. Never re-screens: a row that stops matching
+   mid-session stays put until you re-run, which is what you want when
+   you are watching something move. */
+function visibleRange(){
+  const from = Math.max(0, Math.floor(wrap.scrollTop/ROW_H)-4);
+  const to   = Math.min(S.rows.length,
+                        Math.ceil((wrap.scrollTop+wrap.clientHeight)/ROW_H)+4);
+  return [from, to];
+}
+function visibleSymbols(){
+  const [from,to] = visibleRange();
+  const out = [];
+  for(let i=from;i<to;i++) if(S.rows[i]) out.push(S.rows[i].symbol);
+  return out;
+}
+
+/* Point the websocket at whatever is on screen. Called on scroll, so it
+   is debounced and skipped when the symbol set hasn't actually changed. */
+let subTimer = null, lastSub = "";
+function syncSubscription(){
+  clearTimeout(subTimer);
+  subTimer = setTimeout(async ()=>{
+    if(S.view!=="screen") return;
+    const syms = visibleSymbols();
+    const key = syms.join(",");
+    if(!syms.length || key===lastSub) return;
+    lastSub = key;
+    try{
+      const d = await api("/api/subscribe", {body:{symbols:syms}});
+      S.stream = d.stream;
+      if(d.quotes && Object.keys(d.quotes).length) applyTicks(d.quotes);
+    }catch(e){ /* subscription is best-effort; polling still covers us */ }
+  }, 180);
+}
+
+/* Merge a batch of ticks into the rows and repaint only what moved. */
+function applyTicks(quotes){
+  if(S.view!=="screen" || !S.rows.length) return;
+  const [from,to] = visibleRange();
+  const now = Date.now();
+  let moved = false;
+  for(let i=from;i<to;i++){
+    const r = S.rows[i]; if(!r) continue;
+    const q = quotes[r.symbol]; if(!q) continue;
+    // A repeated price is a heartbeat, not a trade at a new level. Only a
+    // genuine change sets a direction, so an illiquid name reprinting the
+    // same price doesn't strobe.
+    if(q.price!=null && q.price!==r.price){
+      r._dir = q.price > r.price ? "up" : "dn";
+      r.price = q.price;
+      moved = true;
+    } else {
+      r._dir = null;
+    }
+    if(q.change_pct!=null) r.change_pct = q.change_pct;
+    if(q.change!=null) r.change = q.change;
+    if(q.volume!=null) r.volume = q.volume;
+    if(q.ext_change_pct!==undefined && q.ext_change_pct!==null)
+      r.ext_change_pct = q.ext_change_pct;
+    // Every print now carries the running session totals, so take the
+    // day's extremes from the venue when it states them.
+    if(has(q.day_high)) r.day_high = q.day_high;
+    if(has(q.day_low))  r.day_low  = q.day_low;
+    // Only widen from the price when it did not. A print through one of
+    // them *is* the new extreme, and leaving them stale would peg the
+    // range bar at 100% and understate the day's width.
+    if(has(q.price)){
+      if(has(r.day_high)) r.day_high = Math.max(r.day_high, q.price);
+      if(has(r.day_low))  r.day_low  = Math.min(r.day_low,  q.price);
+    }
+    // When this row last heard anything, by any route. A healthy stream
+    // only proves the *feed* is alive; a row nobody is trading gets no
+    // prints at all, and the poll below is what keeps it honest.
+    S.tickAt[r.symbol] = now;
+  }
+  if(moved) repaintWindow(from,to);
+  // Volume creeps up without the price moving, and that is the whole point
+  // of the pace figure — so the strip repaints on every tick, not just the
+  // ones that shifted a price.
+  const shown = S.hover>=0 ? S.hover : S.cursor;
+  if(shown>=from && shown<to) paintStrip();
+}
+
+/* Polling. Covers the whole viewport when the stream is not healthy — a
+   grid that has silently stopped updating while still labelled LIVE is
+   worse than one that admits it is polling.
+
+   It also keeps running *while* the stream is healthy, over the rows the
+   stream has said nothing about. A healthy socket means prints are
+   arriving, not that they are arriving for everything on screen: outside
+   the few hundred most active names a stock can go minutes between
+   trades, and those rows used to sit at their snapshot price for as long
+   as you looked at them, under a badge reporting the feed as live. The
+   feed was. The row was not. */
+const QUIET_ROW_MS = 30000;
+
+async function tickNow(){
+  if(S.view!=="screen" || !S.rows.length) return;
+  let syms = visibleSymbols();
+  if(S.stream && S.stream.healthy){
+    const cutoff = Date.now() - QUIET_ROW_MS;
+    syms = syms.filter(s => !(S.tickAt[s] > cutoff));
+  }
+  if(!syms.length) return;
+  try{
+    const d = await api("/api/quotes?symbols="+encodeURIComponent(syms.join(",")));
+    S.stream = d.stream || S.stream;
+    applyTicks(d.quotes);
+  }catch(e){ /* a failed tick is not worth a message; the badge shows it */ }
+}
+// Cells that flash on a price move. The rest update silently — volume
+// creeping up is not news.
+const FLASH_CELLS = new Set(["price", "change_pct", "change"]);
+// The only columns a tick can change. Repainting the rest would be waste,
+// and would also stringify the HTML that the ticker column now emits.
+const TICK_COLS = COLS.filter(c =>
+  ["price","change","change_pct","volume","ext_change_pct"].includes(c.k));
+
+function repaintWindow(from,to){
+  for(let i=from;i<to;i++){
+    const el = spacer.querySelector(`.r[data-i="${i}"]`);
+    if(!el) continue;
+    const r = S.rows[i];
+    for(const c of TICK_COLS){
+      const cell = el.querySelector(`div[data-c="${c.k}"]`);
+      if(!cell) continue;
+      const txt = c.f(r[c.k]);
+      if(cell.textContent===txt) continue;
+      cell.textContent = txt;
+      if(c.color) cell.className = (c.n?"num ":"")+cls(r[c.k]);
+      if(r._dir && FLASH_CELLS.has(c.k)){
+        cell.classList.remove("tick","up","dn");
+        void cell.offsetWidth;      // restart the animation
+        cell.classList.add("tick", r._dir);
+      }
+    }
+    r._dir = null;
+  }
+}
+
+/* ---------- heatmap ---------- */
+const mapCanvas = document.getElementById("map");
+const mapTip = document.getElementById("mapTip");
+
+async function loadMap(){
+  try{
+    const q = new URLSearchParams({
+      expr:S.expr, filters:JSON.stringify(S.filters),
+      limit:document.getElementById("mapCount").value
+    });
+    const d = await api("/api/heatmap?"+q);
+    S.cells = d.cells||[];
+    const s = (d.summary)||{};
+    document.getElementById("mapBreadth").textContent =
+      `${(s.advancing||0).toLocaleString()} advancing / `
+      + `${(s.declining||0).toLocaleString()} declining`;
+    drawMap();
+  }catch(e){ say(e.message, true); }
+}
+
+function heatColor(pct){
+  const t = Math.max(-1, Math.min(1, (pct||0)/3));
+  const base=[52,52,52];
+  const to = t<0 ? [224,49,49] : [18,209,142];
+  const a = Math.abs(t);
+  const mix = base.map((b,i)=>Math.round(b+(to[i]-b)*a));
+  return `rgb(${mix[0]},${mix[1]},${mix[2]})`;
+}
+
+/* Squarified treemap (Bruls, Huizing & van Wijk) — keeps boxes close to
+   square so small caps stay legible instead of becoming slivers. */
+function squarify(items, x, y, w, h, out){
+  items = items.filter(i=>i.value>0);
+  if(!items.length) return out;
+  const total = items.reduce((a,b)=>a+b.value,0);
+  let scale = (w*h)/total;
+  let i = 0;
+  while(i < items.length){
+    let rowSum = 0, best = Infinity, j = i;
+    const vertical = w >= h;
+    const side = vertical ? h : w;
+    while(j < items.length){
+      const sum = rowSum + items[j].value*scale;
+      const thick = sum/side;
+      let worst = 0;
+      for(let k=i;k<=j;k++){
+        const a = items[k].value*scale;
+        const len = a/thick;
+        worst = Math.max(worst, Math.max(thick/len, len/thick));
+      }
+      if(worst > best) break;
+      best = worst; rowSum = sum; j++;
+    }
+    const thick = rowSum/side;
+    let off = 0;
+    for(let k=i;k<j;k++){
+      const a = items[k].value*scale;
+      const len = a/thick;
+      out.push(vertical
+        ? {item:items[k], x:x, y:y+off, w:thick, h:len}
+        : {item:items[k], x:x+off, y:y, w:len, h:thick});
+      off += len;
+    }
+    if(vertical){ x += thick; w -= thick; } else { y += thick; h -= thick; }
+    i = j;
+    if(w<=0.5 || h<=0.5) break;
+  }
+  return out;
+}
+
+function drawMap(){
+  const c = mapCanvas, ctx = c.getContext("2d");
+  const W = c.width/devicePixelRatio, H = c.height/devicePixelRatio;
+  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle="#000"; ctx.fillRect(0,0,W,H);
+  S.mapRects = [];
+  if(!S.cells.length){
+    ctx.fillStyle="#8a7550"; ctx.font="12px Consolas,monospace";
+    ctx.fillText("no data — press REFRESH", 18, 28); return;
+  }
+  // Group by sector first, so the map reads as a market and not a list.
+  const bySector = new Map();
+  for(const cell of S.cells){
+    const k = cell.sector || "Other";
+    if(!bySector.has(k)) bySector.set(k, []);
+    bySector.get(k).push(cell);
+  }
+  const sectors = [...bySector.entries()].map(([name,list])=>({
+    name, list, value:list.reduce((a,b)=>a+(b.market_cap||0),0)
+  })).sort((a,b)=>b.value-a.value);
+
+  const HEAD = 13;
+  const boxes = squarify(sectors.map(s=>({value:s.value, ref:s})), 0,0,W,H, []);
+  for(const b of boxes){
+    const sec = b.item.ref;
+    ctx.fillStyle="#0e0b04"; ctx.fillRect(b.x,b.y,b.w,b.h);
+    ctx.strokeStyle="#3a2a08"; ctx.lineWidth=1;
+    ctx.strokeRect(b.x+.5,b.y+.5,b.w-1,b.h-1);
+    if(b.h>HEAD+6 && b.w>46){
+      ctx.fillStyle="#ffa000"; ctx.font="10px Consolas,monospace";
+      ctx.textBaseline="middle";
+      ctx.save(); ctx.beginPath(); ctx.rect(b.x+3,b.y,b.w-6,HEAD); ctx.clip();
+      ctx.fillText(sec.name.toUpperCase(), b.x+4, b.y+HEAD/2+1);
+      ctx.restore();
+    }
+    const inner = {x:b.x+1, y:b.y+HEAD, w:b.w-2, h:b.h-HEAD-1};
+    if(inner.w<6||inner.h<6) continue;
+    const kids = squarify(
+      sec.list.map(cell=>({value:cell.market_cap||0, ref:cell})),
+      inner.x, inner.y, inner.w, inner.h, []);
+    for(const k of kids){
+      const cell = k.item.ref;
+      ctx.fillStyle = heatColor(cell.change_pct);
+      ctx.fillRect(k.x,k.y,k.w,k.h);
+      ctx.strokeStyle="rgba(0,0,0,.55)";
+      ctx.strokeRect(k.x+.5,k.y+.5,k.w-1,k.h-1);
+      S.mapRects.push({x:k.x,y:k.y,w:k.w,h:k.h,cell});
+      if(k.w>34 && k.h>17){
+        const fs = Math.max(8, Math.min(15, Math.sqrt(k.w*k.h)/5.2));
+        ctx.fillStyle="rgba(255,255,255,.94)";
+        ctx.font=`${fs}px Consolas,monospace`;
+        ctx.textAlign="center"; ctx.textBaseline="middle";
+        const cy = k.h>30 ? k.y+k.h/2-fs*0.42 : k.y+k.h/2;
+        ctx.fillText(cell.symbol, k.x+k.w/2, cy);
+        if(k.h>30){
+          ctx.font=`${Math.max(7,fs*0.72)}px Consolas,monospace`;
+          ctx.fillStyle="rgba(255,255,255,.82)";
+          ctx.fillText(fpct(cell.change_pct,2), k.x+k.w/2, cy+fs*0.95);
+        }
+        ctx.textAlign="left";
+      }
+    }
+  }
+}
+
+mapCanvas.addEventListener("mousemove", e=>{
+  const r = mapCanvas.getBoundingClientRect();
+  const x = e.clientX-r.left, y = e.clientY-r.top;
+  const hit = S.mapRects.find(m=>x>=m.x&&x<m.x+m.w&&y>=m.y&&y<m.y+m.h);
+  if(!hit){ mapTip.style.display="none"; return; }
+  const c = hit.cell;
+  mapTip.innerHTML =
+    `<span class="amber">${esc(c.symbol)}</span> `
+    + `<span class="${cls(c.change_pct)}">${fpct(c.change_pct)}</span><br>`
+    + `<span class="dim">${esc((c.name||"").slice(0,42))}</span><br>`
+    + `<span class="dim">cap</span> ${fcap(c.market_cap)} `
+    + `<span class="dim">last</span> ${nf(c.price,2)} `
+    + `<span class="dim">vol</span> ${fvol(c.volume)}`;
+  mapTip.style.display="block";
+  const tw = mapTip.offsetWidth, th = mapTip.offsetHeight;
+  mapTip.style.left = Math.min(x+14, r.width-tw-6)+"px";
+  mapTip.style.top  = Math.min(y+14, r.height-th-6)+"px";
+});
+mapCanvas.addEventListener("mouseleave", ()=>{ mapTip.style.display="none"; });
+mapCanvas.addEventListener("click", e=>{
+  const r = mapCanvas.getBoundingClientRect();
+  const x = e.clientX-r.left, y = e.clientY-r.top;
+  const hit = S.mapRects.find(m=>x>=m.x&&x<m.x+m.w&&y>=m.y&&y<m.y+m.h);
+  if(hit) openTicker(hit.cell.symbol);
+});
+document.getElementById("mapCount").onchange = loadMap;
+
+/* ---------- world map ----------------------------------------------
+   Every country Nasdaq reports a domicile for, with a real centroid and
+   a slot on the tile grid. About two kilobytes of coordinates and no
+   external data, so the page stays self-contained.
+   [lat, lon, tileCol, tileRow, code]                                  */
+const COUNTRIES = {
+  "United States":[39.8,-98.6,3,4,"USA"], "Canada":[56.1,-106.3,3,2,"CAN"],
+  "Mexico":[23.6,-102.6,3,6,"MEX"], "Brazil":[-14.2,-51.9,5,9,"BRA"],
+  "Argentina":[-38.4,-63.6,4,11,"ARG"], "Chile":[-35.7,-71.5,3,11,"CHL"],
+  "Colombia":[4.6,-74.3,4,7,"COL"], "Peru":[-9.2,-75.0,3,9,"PER"],
+  "Uruguay":[-32.5,-55.8,5,11,"URY"], "Costa Rica":[9.7,-83.8,2,7,"CRI"],
+  "Panama":[8.5,-80.8,3,7,"PAN"], "Puerto Rico":[18.2,-66.6,5,6,"PRI"],
+  "Bahamas":[25.0,-77.4,4,6,"BHS"], "Bermuda":[32.3,-64.8,5,5,"BMU"],
+  "Cayman Islands":[19.3,-81.3,4,5,"CYM"],
+  "British Virgin Islands":[18.4,-64.6,6,6,"VGB"],
+  "U.S. Virgin Islands":[18.3,-64.9,6,5,"VIR"], "Curacao":[12.2,-69.0,6,7,"CUW"],
+  "United Kingdom":[55.4,-3.4,8,2,"GBR"], "Ireland":[53.4,-8.2,7,2,"IRL"],
+  "France":[46.2,2.2,8,4,"FRA"], "Germany":[51.2,10.5,9,3,"DEU"],
+  "Netherlands":[52.1,5.3,9,2,"NLD"], "Belgium":[50.5,4.5,8,3,"BEL"],
+  "Luxembourg":[49.8,6.1,9,4,"LUX"], "Switzerland":[46.8,8.2,9,5,"CHE"],
+  "Italy":[41.9,12.6,9,6,"ITA"], "Spain":[40.5,-3.7,7,5,"ESP"],
+  "Portugal":[39.4,-8.2,7,6,"PRT"], "Greece":[39.1,21.8,10,6,"GRC"],
+  "Sweden":[60.1,18.6,10,1,"SWE"], "Norway":[60.5,8.5,9,1,"NOR"],
+  "Denmark":[56.3,9.5,8,1,"DNK"], "Finland":[61.9,25.7,11,1,"FIN"],
+  "Cyprus":[35.1,33.4,11,6,"CYP"], "Monaco":[43.7,7.4,8,5,"MCO"],
+  "Gibraltar":[36.1,-5.4,7,7,"GIB"], "Jersey":[49.2,-2.1,7,3,"JEY"],
+  "Guernsey":[49.5,-2.6,6,3,"GGY"], "Isle of Man":[54.2,-4.5,6,2,"IMN"],
+  "Turkey":[38.9,35.2,11,5,"TUR"], "Kazakhstan":[48.0,66.9,13,3,"KAZ"],
+  "Israel":[31.0,34.9,11,7,"ISR"], "Jordan":[30.6,36.2,12,7,"JOR"],
+  "United Arab Emirates":[23.4,53.8,12,8,"ARE"],
+  "South Africa":[-30.6,22.9,10,11,"ZAF"], "India":[20.6,79.0,13,7,"IND"],
+  "China":[35.9,104.2,15,4,"CHN"], "Hong Kong":[22.3,114.2,15,6,"HKG"],
+  "Macau":[22.2,113.5,14,6,"MAC"], "Taiwan":[23.7,121.0,16,6,"TWN"],
+  "Japan":[36.2,138.3,17,4,"JPN"], "South Korea":[35.9,127.8,16,4,"KOR"],
+  "Singapore":[1.4,103.8,14,8,"SGP"], "Malaysia":[4.2,102.0,14,9,"MYS"],
+  "Indonesia":[-0.8,113.9,15,9,"IDN"], "Philippines":[12.9,121.8,16,8,"PHL"],
+  "Cambodia":[12.6,105.0,15,8,"KHM"], "Australia":[-25.3,133.8,16,10,"AUS"],
+  "New Zealand":[-40.9,174.9,17,11,"NZL"],
+  "Marshall Islands":[7.1,171.2,18,7,"MHL"],
+};
+// Registrations of convenience rather than markets. They keep true
+// positions as bubbles, but an equal tile each would badly overstate a
+// shipping registry with four listings.
+const OFFSHORE = new Set(["Marshall Islands","Curacao","Gibraltar","Jersey",
+  "Guernsey","Isle of Man","British Virgin Islands","U.S. Virgin Islands",
+  "Bahamas","Monaco","Cayman Islands","Bermuda"]);
+
+const worldCanvas = document.getElementById("world");
+const worldTip = document.getElementById("worldTip");
+S.world = {layout:"bubbles", scope:"all", rows:[], hits:[]};
+
+async function loadWorld(){
+  try{
+    const q = new URLSearchParams({scope:S.world.scope,
+                                  filters:JSON.stringify(S.filters)});
+    const d = await api("/api/world?"+q);
+    S.world.rows = d.countries||[];
+    const known = S.world.rows.filter(c=>COUNTRIES[c.name]).length;
+    document.getElementById("wNote").textContent =
+      `${(d.placed||0).toLocaleString()} companies · ${S.world.rows.length} countries`
+      + (d.unplaced ? `  ·  ${d.unplaced.toLocaleString()} with no domicile` : "")
+      + (known < S.world.rows.length
+         ? `  ·  ${S.world.rows.length-known} unmapped` : "");
+    drawWorld();
+  }catch(e){ say(e.message, true); }
+}
+
+function drawWorld(){
+  const c = worldCanvas, ctx = c.getContext("2d");
+  const W = c.width/devicePixelRatio, H = c.height/devicePixelRatio;
+  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+  ctx.fillStyle="#000"; ctx.fillRect(0,0,W,H);
+  S.world.hits = [];
+  const rows = S.world.rows.filter(r=>COUNTRIES[r.name]);
+  if(!rows.length){
+    ctx.fillStyle="#8a7550"; ctx.font="12px Consolas,monospace";
+    ctx.fillText("no country data — press REFRESH", 18, 26); return;
+  }
+  (S.world.layout==="bubbles" ? drawBubbles : drawTiles)(ctx, W, H, rows);
+}
+
+function drawBubbles(ctx, W, H, rows){
+  const PAD = 26;
+  // Equirectangular, clipped near ±60° latitude: nothing is listed in
+  // Antarctica and the empty band would waste half the canvas.
+  const px = lon => PAD + (lon+180)/360 * (W-PAD*2);
+  const py = lat => PAD + (60-Math.max(-60,Math.min(78,lat)))/138 * (H-PAD*2);
+
+  ctx.lineWidth=1; ctx.strokeStyle="#161106";
+  for(let lon=-180; lon<=180; lon+=30){
+    ctx.beginPath(); ctx.moveTo(px(lon),PAD); ctx.lineTo(px(lon),H-PAD); ctx.stroke();
+  }
+  for(let lat=-60; lat<=60; lat+=30){
+    ctx.beginPath(); ctx.moveTo(PAD,py(lat)); ctx.lineTo(W-PAD,py(lat)); ctx.stroke();
+  }
+  ctx.strokeStyle="#241a05";
+  ctx.beginPath(); ctx.moveTo(PAD,py(0)); ctx.lineTo(W-PAD,py(0)); ctx.stroke();
+
+  const maxCap = Math.max(...rows.map(r=>r.market_cap||0)) || 1;
+  // Area proportional to market cap, so the US reads as genuinely huge
+  // without one circle swallowing the map.
+  const rMax = Math.min(W,H)*0.16;
+  const sized = rows.map(r=>({r, rad: Math.max(3.2,
+      Math.sqrt((r.market_cap||0)/maxCap) * rMax)}))
+    .sort((a,b)=>b.rad-a.rad);
+
+  for(const {r, rad} of sized){
+    const [lat,lon] = COUNTRIES[r.name];
+    const x = px(lon), y = py(lat);
+    ctx.beginPath(); ctx.arc(x,y,rad,0,Math.PI*2);
+    ctx.fillStyle = heatColor(r.change_pct); ctx.fill();
+    ctx.strokeStyle = "rgba(255,160,0,.55)"; ctx.lineWidth=1; ctx.stroke();
+    S.world.hits.push({x, y, rad, row:r});
+    if(rad > 14){
+      ctx.fillStyle="rgba(255,255,255,.95)";
+      ctx.font=`${Math.min(15,Math.max(9,rad/2.4))}px Consolas,monospace`;
+      ctx.textAlign="center"; ctx.textBaseline="middle";
+      ctx.fillText(COUNTRIES[r.name][4], x, y - (rad>26?6:0));
+      if(rad>26){
+        ctx.font=`${Math.max(8,rad/3.4)}px Consolas,monospace`;
+        ctx.fillText(fpct(r.change_pct), x, y+rad/3.1);
+      }
+      ctx.textAlign="left";
+    }
+  }
+}
+
+function drawTiles(ctx, W, H, allRows){
+  // Collapse the flags of convenience into a single tile.
+  const rows = [], off = {name:"Offshore", count:0, market_cap:0, _w:0,
+                          advancing:0, declining:0};
+  for(const r of allRows){
+    if(OFFSHORE.has(r.name)){
+      off.count += r.count; off.market_cap += r.market_cap;
+      off.advancing += r.advancing||0; off.declining += r.declining||0;
+      off._w += (r.change_pct||0) * (r.market_cap||0);
+    } else rows.push(r);
+  }
+  if(off.count){
+    off.change_pct = off.market_cap ? off._w/off.market_cap : 0;
+    off.tile = [6,4]; rows.push(off);
+  }
+  const cells = rows.map(r=>{
+    const t = r.tile || COUNTRIES[r.name].slice(2,4);
+    return {r, col:t[0], row:t[1]};
+  });
+  const maxC = Math.max(...cells.map(c=>c.col));
+  const maxR = Math.max(...cells.map(c=>c.row));
+  const PAD = 16, GAP = 3;
+  const size = Math.min((W-PAD*2)/(maxC+1), (H-PAD*2)/(maxR+1)) - GAP;
+  const ox = PAD + ((W-PAD*2) - (maxC+1)*(size+GAP))/2;
+  const oy = PAD + ((H-PAD*2) - (maxR+1)*(size+GAP))/2;
+
+  for(const {r, col, row} of cells){
+    const x = ox + col*(size+GAP), y = oy + row*(size+GAP);
+    ctx.fillStyle = heatColor(r.change_pct);
+    ctx.fillRect(x,y,size,size);
+    ctx.strokeStyle="rgba(0,0,0,.6)"; ctx.strokeRect(x+.5,y+.5,size-1,size-1);
+    S.world.hits.push({row:r, square:true, x0:x, y0:y, size});
+    if(size>26){
+      ctx.fillStyle="rgba(255,255,255,.95)";
+      ctx.font=`${Math.min(14,size/3.4)}px Consolas,monospace`;
+      ctx.textAlign="center"; ctx.textBaseline="middle";
+      ctx.fillText(COUNTRIES[r.name] ? COUNTRIES[r.name][4] : "OFFS",
+                   x+size/2, y+size/2-size/9);
+      ctx.font=`${Math.min(11,size/4.6)}px Consolas,monospace`;
+      ctx.fillStyle="rgba(255,255,255,.82)";
+      ctx.fillText(fpct(r.change_pct), x+size/2, y+size/2+size/4.2);
+      ctx.textAlign="left";
+    }
+  }
+}
+
+function worldHit(x,y){
+  // Reverse order so the small bubbles, drawn last, win the click.
+  for(let i=S.world.hits.length-1;i>=0;i--){
+    const h = S.world.hits[i];
+    if(h.square){
+      if(x>=h.x0 && x<h.x0+h.size && y>=h.y0 && y<h.y0+h.size) return h;
+    } else if(Math.hypot(x-h.x, y-h.y) <= h.rad) return h;
+  }
+  return null;
+}
+
+worldCanvas.addEventListener("mousemove", e=>{
+  const b = worldCanvas.getBoundingClientRect();
+  const x = e.clientX-b.left, y = e.clientY-b.top;
+  const hit = worldHit(x,y);
+  if(!hit){ worldTip.style.display="none"; return; }
+  const r = hit.row;
+  worldTip.innerHTML =
+    `<span class="amber">${esc(r.name)}</span> `
+    + `<span class="${cls(r.change_pct)}">${fpct(r.change_pct)}</span><br>`
+    + `<span class="dim">${r.count} companies · ${fcap(r.market_cap)} cap</span><br>`
+    + `<span class="up">${r.advancing||0} up</span> `
+    + `<span class="dn">${r.declining||0} down</span>`;
+  worldTip.style.display="block";
+  worldTip.style.left = Math.min(x+14, b.width-worldTip.offsetWidth-6)+"px";
+  worldTip.style.top  = Math.min(y+14, b.height-worldTip.offsetHeight-6)+"px";
+});
+worldCanvas.addEventListener("mouseleave", ()=>{ worldTip.style.display="none"; });
+worldCanvas.addEventListener("click", e=>{
+  const b = worldCanvas.getBoundingClientRect();
+  const hit = worldHit(e.clientX-b.left, e.clientY-b.top);
+  if(!hit || hit.row.name==="Offshore") return;
+  const scope = S.world.scope==="adr" ? "adr and " : "";
+  applyExpr(`${scope}country == "${hit.row.name}"`);
+  setView("screen");
+  say(`${hit.row.name}: ${hit.row.count} companies`);
+});
+
+(function worldButtons(){
+  const set = (id, on) => document.getElementById(id).classList.toggle("on", on);
+  document.getElementById("wBubbles").onclick = ()=>{
+    S.world.layout="bubbles"; set("wBubbles",true); set("wTiles",false); drawWorld();
+  };
+  document.getElementById("wTiles").onclick = ()=>{
+    S.world.layout="tiles"; set("wTiles",true); set("wBubbles",false); drawWorld();
+  };
+  document.getElementById("wAll").onclick = ()=>{
+    S.world.scope="all"; set("wAll",true); set("wAdr",false); loadWorld();
+  };
+  document.getElementById("wAdr").onclick = ()=>{
+    S.world.scope="adr"; set("wAdr",true); set("wAll",false); loadWorld();
+  };
+})();
+
+/* ---------- ADR view ---------- */
+const ADR_COLS = [
+  {k:"symbol",     t:"TICKER",  w:62,  f:v=>esc(v)},
+  {k:"name",       t:"COMPANY", w:250, f:v=>esc(String(v||"").replace(
+      /\s*American Depositary\s*(Shares?|Receipts?).*$/i,""))},
+  {k:"country",    t:"COUNTRY", w:112, f:v=>esc(v)},
+  {k:"price",      t:"LAST",    w:70,  n:1, f:v=>nf(v,2)},
+  {k:"change_pct", t:"CHG%",    w:64,  n:1, f:v=>fpct(v), color:1},
+  {k:"ext_change_pct", t:"EXT%", w:60, n:1, f:v=>fpct(v), color:1},
+  {k:"volume",     t:"VOLUME",  w:70,  n:1, f:fvol},
+  {k:"rel_volume", t:"RVOL",    w:52,  n:1, f:v=>nf(v,2)},
+  {k:"market_cap", t:"MKT CAP", w:74,  n:1, f:fcap},
+  {k:"pe",         t:"P/E",     w:56,  n:1, f:v=>nf(v,1)},
+  {k:"sector",     t:"SECTOR",  w:122, f:v=>esc(v)},
+];
+const ADR_W = ADR_COLS.reduce((a,c)=>a+c.w,0);
+const adrWrap = document.getElementById("adrWrap");
+const adrSpacer = document.getElementById("adrSpacer");
+S.adr = {rows:[]};
+
+async function loadAdr(){
+  const country = document.getElementById("adrCountry").value;
+  const sort = document.getElementById("adrSort").value;
+  let expr = "adr";
+  if(country && country!=="Any") expr += ` and country == "${country}"`;
+  try{
+    const d = await api("/api/screen?"+new URLSearchParams(
+      {expr, sort, dir:"desc", limit:"1000"}));
+    S.adr.rows = d.rows;
+    document.getElementById("adrNote").textContent =
+      `${d.total.toLocaleString()} ADRs`
+      + (d.priced==="live" ? " · priced live" : "");
+    document.getElementById("adrHead").innerHTML = ADR_COLS.map(c=>
+      `<div style="width:${c.w}px;${c.n?"text-align:right":""}">${c.t}</div>`).join("");
+    drawAdr();
+    // Fill the country list from what is actually listed, once.
+    const sel = document.getElementById("adrCountry");
+    if(sel.options.length<=1){
+      const w = await api("/api/world?scope=adr");
+      for(const c of (w.countries||[]).slice().sort((a,b)=>b.count-a.count)){
+        const o=document.createElement("option");
+        o.textContent=c.name; o.title=`${c.count} ADRs`; sel.appendChild(o);
+      }
+      // Restore the saved country only once the options exist.
+      if(S._savedAdrCountry
+         && [...sel.options].some(o=>o.textContent===S._savedAdrCountry)){
+        sel.value = S._savedAdrCountry; S._savedAdrCountry = null;
+        return loadAdr();
+      }
+    }
+    saveUi();
+  }catch(e){ say(e.message, true); }
+}
+
+function drawAdr(){
+  const rows = S.adr.rows;
+  adrSpacer.style.height = (rows.length*ROW_H)+"px";
+  adrSpacer.style.width = ADR_W+"px";
+  const top = adrWrap.scrollTop, h = adrWrap.clientHeight;
+  const from = Math.max(0, Math.floor(top/ROW_H)-8);
+  const to = Math.min(rows.length, Math.ceil((top+h)/ROW_H)+8);
+  const out = [];
+  for(let i=from;i<to;i++){
+    const r = rows[i];
+    out.push(`<div class="r" data-sym="${esc(r.symbol)}" `
+           + `style="top:${i*ROW_H}px;width:${ADR_W}px">`);
+    for(const c of ADR_COLS){
+      const v = r[c.k];
+      out.push(`<div class="${c.n?"num":""}${c.color?" "+cls(v):""}${c.k==="symbol"?" sym":""}" `
+             + `style="width:${c.w}px">${c.f(v)}</div>`);
+    }
+    out.push("</div>");
+  }
+  adrSpacer.innerHTML = out.join("");
+}
+adrWrap.addEventListener("scroll", ()=>{
+  drawAdr();
+  document.getElementById("adrHead").scrollLeft = adrWrap.scrollLeft;
+});
+adrSpacer.addEventListener("click", e=>{
+  const row = e.target.closest(".r");
+  if(row) openTicker(row.dataset.sym);
+});
+document.getElementById("adrCountry").onchange = loadAdr;
+document.getElementById("adrSort").onchange = loadAdr;
+
+/* ---------- watchlist ---------- */
+S.watch = {rows:[], symbols:new Set(), open:true};
+
+async function loadWatch(){
+  try{
+    const d = await api("/api/watchlist");
+    S.watch.rows = d.watchlist||[];
+    S.watch.symbols = new Set(S.watch.rows.map(r=>r.symbol));
+    drawWatch();
+  }catch(e){ /* the panel is not worth an error toast */ }
+}
+
+function drawWatch(){
+  const el = document.getElementById("watchRows");
+  const rows = S.watch.rows;
+  document.getElementById("watchNote").textContent =
+    rows.length ? `${rows.length}` : "";
+  if(!rows.length){
+    el.innerHTML = `<div class="dim" style="padding:6px 8px">`
+      + `nothing watched yet — press <span class="amber">W</span> on a row</div>`;
+    return;
+  }
+  el.innerHTML = rows.map(r=>{
+    const pnl = r.pnl==null ? "" :
+      `<div class="wpnl"><span class="${cls(r.pnl)}">${r.pnl>0?"+":""}`
+      + `${nf(r.pnl,2)}</span> <span class="dim">(${fpct(r.pnl_pct)})</span> `
+      + `<span class="dim">${nf(r.shares,0)} @ ${nf(r.cost_basis,2)}</span></div>`;
+    return `<div class="wrow" data-sym="${esc(r.symbol)}">`
+      + `<span class="ws">${esc(r.symbol)}</span>`
+      + `<span class="wp">${nf(r.price,2)}</span>`
+      + `<span class="wc ${cls(r.change_pct)}">${fpct(r.change_pct)}</span>`
+      + `<span class="wx" data-drop="${esc(r.symbol)}">X</span></div>` + pnl;
+  }).join("");
+}
+
+document.getElementById("watchRows").addEventListener("click", e=>{
+  const drop = e.target.dataset && e.target.dataset.drop;
+  if(drop){ e.stopPropagation(); toggleWatch(drop, "remove"); return; }
+  const row = e.target.closest(".wrow");
+  if(row) openTicker(row.dataset.sym);
+});
+
+async function toggleWatch(symbol, action){
+  if(!symbol) return;
+  try{
+    const d = await api("/api/watchlist", {body:{symbol, action:action||"toggle"}});
+    S.watch.rows = d.watchlist||[];
+    S.watch.symbols = new Set(S.watch.rows.map(r=>r.symbol));
+    drawWatch();
+    say(d.watched ? `${symbol} added to watch` : `${symbol} removed from watch`);
+  }catch(e){ say(e.message, true); }
+}
+
+/* Watchlist prices come down the same tick stream as everything else. */
+function applyWatchTicks(quotes){
+  let touched = false;
+  for(const r of S.watch.rows){
+    const q = quotes[r.symbol];
+    if(!q) continue;
+    if(q.price!=null){ r.price = q.price; touched = true; }
+    if(q.change_pct!=null) r.change_pct = q.change_pct;
+    if(r.shares && r.cost_basis && r.price!=null){
+      r.pnl = (r.price - r.cost_basis) * r.shares;
+      r.pnl_pct = (r.price - r.cost_basis) / r.cost_basis * 100;
+    }
+  }
+  if(touched) drawWatch();
+}
+
+/* ---------- earnings calendar ---------------------------------------
+   `earnings_ts` has been in every row since the first snapshot and was
+   never surfaced. Grouped by *exchange* day: a 16:00 ET print lands after
+   midnight in India, and bucketing by local date would split one earnings
+   day across two. */
+S.earn = {days:[]};
+
+async function loadEarnings(){
+  const days = document.getElementById("earnDays").value;
+  const cap  = document.getElementById("earnCap").value;
+  const note = document.getElementById("earnNote");
+  note.textContent = "loading…";
+  try{
+    const d = await api("/api/earnings?"+new URLSearchParams(
+      {days, min_cap:cap}));
+    S.earn.days = d.days||[];
+    const total = S.earn.days.reduce((a,x)=>a+x.count,0);
+    note.textContent = `${total} companies over ${d.window} days`;
+    drawEarnings();
+    saveUi();
+  }catch(e){ note.textContent = "unavailable"; say(e.message, true); }
+}
+
+function drawEarnings(){
+  const el = document.getElementById("earnWrap");
+  if(!S.earn.days.length){
+    el.innerHTML = `<div class="dim" style="padding:8px 10px">`
+      + `nothing scheduled in this window</div>`;
+    return;
+  }
+  el.innerHTML = S.earn.days.map(day=>
+    `<div class="eday"><b>${esc(day.weekday)} ${esc(day.date)}</b>`
+    + `<span class="dim">${day.count} companies</span>`
+    + `<span class="dim">·</span>`
+    + `<span style="color:#4a7fd4">${day.bmo} before open</span>`
+    + `<span class="amber">${day.amc} after close</span>`
+    + `<span class="dim" style="margin-left:auto">`
+    + `${fcap(day.market_cap)} reporting</span></div>`
+    + day.rows.map(r=>
+        `<div class="erow" data-sym="${esc(r.symbol)}">`
+        + `<span class="es">${esc(r.symbol)}</span>`
+        + `<span class="ew ${(r.earnings_when||"").toLowerCase()}">`
+        + `${esc(r.earnings_when||"")}</span>`
+        + `<span class="en">${esc(r.name||"")}</span>`
+        + `<span class="ec ${cls(r.change_pct)}">${fpct(r.change_pct)}</span>`
+        + `<span class="ev">${nf(r.price,2)}</span>`
+        + `<span class="ev">${fcap(r.market_cap)}</span>`
+        + `</div>`).join("")
+  ).join("");
+}
+
+document.getElementById("earnWrap").addEventListener("click", e=>{
+  const row = e.target.closest(".erow");
+  if(row) openTicker(row.dataset.sym);
+});
+document.getElementById("earnDays").onchange = loadEarnings;
+document.getElementById("earnCap").onchange = loadEarnings;
+
+/* ---------- screen diffs ---------- */
+S.diffs = {};
+
+async function loadDiffs(){
+  try{
+    const d = await api("/api/diffs");
+    S.diffs = {};
+    for(const s of (d.screens||[])) S.diffs[s.name] = s;
+  }catch(e){ /* badges are decoration */ }
+}
+
+/* ---------- news ----------------------------------------------------
+   Per-company stories in the ticker view. Yahoo's search returns anything
+   *mentioning* the ticker, so each row shows which companies the story is
+   actually tagged with — a piece carrying eight tickers is visibly a
+   roundup, not news about the company you are looking at. */
+S.news = {symbol:null, items:[], strict:false, note:""};
+S.filings = {rows:[], note:""};
+
+function fage(seconds){
+  if(seconds==null) return "";
+  const m = seconds/60;
+  if(m < 60) return Math.max(0,Math.round(m))+"m";
+  const h = m/60;
+  if(h < 48) return h.toFixed(h<10?1:0)+"h";
+  return Math.round(h/24)+"d";
+}
+
+async function loadNews(symbol){
+  const sym = (symbol || S.symbol || "").toUpperCase();
+  if(!sym) return;
+  S.news.symbol = sym;
+  S.news.note = "loading…"; paneNote();
+  try{
+    const q = new URLSearchParams({symbol:sym, limit:"14"});
+    if(S.news.strict) q.set("strict","1");
+    const d = await api("/api/news?"+q);
+    // A slow request for a symbol you have already navigated away from
+    // must not overwrite the one you are looking at now.
+    if(S.news.symbol !== sym) return;
+    S.news.items = d.items || [];
+    S.news.note = d.error ? d.error
+      : `${S.news.items.length} stories`
+        + (S.news.items.length ? ` · newest ${fage(S.news.items[0].age_seconds)} ago` : "");
+    paneNote();
+    drawNews();
+  }catch(e){
+    S.news.note = "unavailable"; paneNote();
+    S.news.items = []; drawNews();
+  }
+}
+
+function drawNews(){
+  const el = document.getElementById("newsList");
+  if(!S.news.items.length){
+    el.innerHTML = `<div class="dim" style="padding:6px 9px">`
+      + `nothing recent for ${esc(S.news.symbol||"")}</div>`;
+    return;
+  }
+  el.innerHTML = S.news.items.map((n, i)=>{
+    const others = (n.related||[]).filter(t=>t!==S.news.symbol);
+    // Under an hour is worth colouring; the rest is just history.
+    const fresh = n.age_seconds!=null && n.age_seconds < 3600 ? " fresh" : "";
+    // The ticker sits on the bar itself, not off to one side: on a feed
+    // that mixes company news with roundups you need to see at a glance
+    // which row is about what.
+    return `<div class="nrow${fresh}" data-i="${i}" `
+      + `title="${esc(n.title||"")}">`
+      + `<span class="nage">${fage(n.age_seconds)}</span>`
+      + `<span class="ntick">${n.tagged ? esc(S.news.symbol) : "—"}</span>`
+      + `<span class="npub">${esc(n.publisher||"")}</span>`
+      + `<span class="ntitle">${esc(n.title||"")}</span>`
+      + `<span class="nrel">${others.length?esc(others.slice(0,6).join(" ")):""}</span>`
+      + `</div>`;
+  }).join("");
+}
+
+document.getElementById("newsList").addEventListener("click", e=>{
+  const row = e.target.closest(".nrow");
+  if(!row) return;
+  const n = S.news.items[+row.dataset.i];
+  if(n) openArticle(n.uuid, n.title, n.publisher, n.link);
+});
+
+document.getElementById("newsStrict").onchange = e=>{
+  S.news.strict = e.target.checked;
+  saveUi();
+  loadNews(S.news.symbol);
+};
+
+/* One panel under the chart with three tabs, rather than three stacked
+   panels each with its own title bar. The note line and the "only tagged"
+   control belong to whichever tab is showing. */
+S.pane = "news";
+
+function setPane(name){
+  S.pane = name;
+  document.querySelectorAll(".tkTab").forEach(t=>
+    t.classList.toggle("on", t.dataset.pane===name));
+  document.querySelectorAll("#tkPanes .pane").forEach(p=>
+    p.classList.toggle("on", p.id === {news:"newsList", rel:"relList",
+                                       filings:"filingList"}[name]));
+  document.getElementById("strictWrap").style.display =
+    name==="news" ? "" : "none";
+  paneNote();
+  saveUi();
+}
+
+function paneNote(text){
+  const el = document.getElementById("paneNote");
+  if(text !== undefined && S.pane === S._noteFor) { el.textContent = text; return; }
+  el.textContent = {news: S.news.note || "", rel: S.rel.note || "",
+                    filings: S.filings.note || ""}[S.pane] || "";
+}
+
+document.getElementById("tkTabs").addEventListener("click", e=>{
+  const tab = e.target.closest(".tkTab");
+  if(tab) setPane(tab.dataset.pane);
+});
+
+/* ---------- market news ----------------------------------------------
+   Yahoo's wire carries no tickers, and the search endpoint takes one
+   symbol at a time — so the feed asks about whatever is moving hardest,
+   which the snapshot already knows for free, and merges the two. */
+/* ---------- live news ---------- */
+S.livenews = {channels:[], mentions:[], current:null, loaded:false};
+
+const fwatch = n =>
+  n >= 1e6 ? (n/1e6).toFixed(1).replace(/\.0$/,"") + "M"
+: n >= 1e3 ? Math.round(n/1e3) + "K"
+: String(n);
+
+async function loadLiveNews(force){
+  const note = document.getElementById("lnNote");
+  note.textContent = "checking who is on air…";
+  try{
+    const d = await api("/api/livenews" + (force?"?force=1":""));
+    S.livenews.channels = d.channels||[];
+    S.livenews.mentions = d.mentions||[];
+    S.livenews.loaded = true;
+    // Keep the channel you chose if it is still broadcasting; only fall
+    // back to the default when it has gone off air under you.
+    const still = S.livenews.channels.find(c=>c.id===S.livenews.current && c.live);
+    if(!still) S.livenews.current = d.default;
+    note.textContent = d.live_count
+      ? `${d.live_count} live of ${S.livenews.channels.length}`
+      : "nothing live right now";
+    drawLiveNews();
+  }catch(e){ note.textContent = "unavailable"; say(e.message, true); }
+}
+
+function drawLiveNews(){
+  const bar = document.getElementById("lnChannels");
+  bar.innerHTML = S.livenews.channels.map(c=>{
+    const on = c.id===S.livenews.current;
+    // Compact rather than exact: the rail is scanned, and "7.5M" carries
+    // the whole meaning of 7,471,034 in a third of the width. It also
+    // sidesteps digit grouping, which toLocaleString renders by system
+    // locale — 74,71,034 on an Indian machine, which is correct there and
+    // wrong beside a column of US market data.
+    const who = c.live && c.viewers
+      ? `<span class="who">${fwatch(c.viewers)}</span>` : "";
+    return `<div class="lnch${c.live?" islive":" off"}${on?" on":""}"`
+      + ` data-ch="${esc(c.id)}" title="${esc(c.note||"")}">`
+      + `<span class="dot"></span>${esc(c.name)}${who}</div>`;
+  }).join("") || `<span class="dim" style="padding:3px 10px">no channels</span>`;
+
+  const ch = S.livenews.channels.find(c=>c.id===S.livenews.current);
+  const player = document.getElementById("lnPlayer");
+  if(ch && ch.live && ch.video_id){
+    // Only rebuild the iframe when the channel actually changes — resetting
+    // src on every redraw would restart the stream under the viewer.
+    if(player.dataset.vid !== ch.video_id){
+      player.dataset.vid = ch.video_id;
+      // youtube-nocookie, not youtube: the privacy-preserving embed host
+      // sets no tracking cookie unless you actually press play. Same
+      // player, same stream. The iframe is built here rather than living
+      // in the markup so that nothing reaches YouTube until you open this
+      // view and a channel is actually on air.
+      player.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/`
+        + `${encodeURIComponent(ch.video_id)}?rel=0&modestbranding=1&playsinline=1"`
+        + ` allow="accelerometer; encrypted-media; picture-in-picture"`
+        + ` allowfullscreen referrerpolicy="strict-origin-when-cross-origin"`
+        + ` title="${esc(ch.name)}"></iframe>`;
+    }
+  }else{
+    player.dataset.vid = "";
+    player.innerHTML = `<div id="lnEmpty" class="dim">`
+      + (S.livenews.loaded ? "no network is broadcasting right now — the US"
+         + " session is closed" : "checking who is on air…") + `</div>`;
+  }
+
+  document.getElementById("lnRailNote").textContent =
+    S.livenews.mentions.length ? "from headlines" : "";
+  const rail = document.getElementById("lnMentions");
+  rail.innerHTML = S.livenews.mentions.map(m=>
+    `<div class="lnm" data-s="${esc(m.symbol)}">`
+    + `<div class="top"><span class="sym">${esc(m.symbol)}</span>`
+    + `<span class="${cls(m.change_pct)}">${fpct(m.change_pct)}</span></div>`
+    + `<span class="hl">${esc(m.headline||m.name||"")}</span></div>`
+  ).join("") || `<div class="dim" style="padding:8px 9px">nothing tagged yet`
+    + `</div>`;
+}
+
+document.getElementById("lnChannels").onclick = e=>{
+  const el = e.target.closest(".lnch");
+  if(!el || el.classList.contains("off")) return;
+  S.livenews.current = el.dataset.ch;
+  drawLiveNews(); saveUi();
+};
+document.getElementById("lnMentions").onclick = e=>{
+  const el = e.target.closest(".lnm");
+  if(el) openTicker(el.dataset.s);
+};
+document.getElementById("lnRefresh").onclick = ()=>loadLiveNews(true);
+
+S.mkt = {items:[], movers:[]};
+
+async function loadMarketNews(force){
+  const note = document.getElementById("mktNewsNote");
+  note.textContent = "building…";
+  try{
+    const d = await api("/api/market-news?limit=60"+(force?"&force=1":""));
+    S.mkt.items = d.items||[]; S.mkt.movers = d.movers||[];
+    note.textContent = `${d.total} stories · ${new Date(d.as_of*1000)
+      .toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})}`;
+    drawMarketNews();
+  }catch(e){ note.textContent = "unavailable"; say(e.message, true); }
+}
+
+function drawMarketNews(){
+  document.getElementById("mktMovers").innerHTML =
+    S.mkt.movers.map(m=>
+      `<div class="idx" data-s="${esc(m.symbol)}"><b>${esc(m.symbol)}</b>`
+      + `<span class="${cls(m.change_pct)}">${fpct(m.change_pct)}</span></div>`
+    ).join("") || `<span class="dim" style="padding:2px 10px">no movers yet</span>`;
+
+  const el = document.getElementById("mktNews");
+  if(!S.mkt.items.length){
+    el.innerHTML = `<div class="dim" style="padding:8px 10px">nothing yet</div>`;
+    return;
+  }
+  el.innerHTML = S.mkt.items.map((n,i)=>{
+    // The ticker the story is actually about, sitting on the bar itself.
+    const lead = n.lead
+      ? `<span>${esc(n.lead)}</span>`
+      : `<span class="mkt">MARKET</span>`;
+    const chg = n.lead_change!=null
+      ? `<span class="mchg ${cls(n.lead_change)}">${fpct(n.lead_change)}</span>`
+      : `<span class="mchg"></span>`;
+    const others = (n.related||[]).filter(t=>t!==n.lead);
+    return `<div class="mrow${n.hot>=60?" veryhot":""}" data-i="${i}" `
+      + `title="${esc(n.title||"")}">`
+      + `<span class="hot">${Math.round(n.hot)}</span>`
+      + `<span class="mtick">${lead}</span>${chg}`
+      + `<span class="mage">${fage(n.age_seconds)}</span>`
+      + `<span class="mpub">${esc(n.publisher||"")}</span>`
+      + `<span class="mtitle">${esc(n.title||"")}`
+      + (others.length ? ` <span class="dim">· also ${esc(
+          others.slice(0,5).join(" "))}</span>` : "")
+      + `</span></div>`;
+  }).join("");
+}
+
+document.getElementById("mktNews").addEventListener("click", e=>{
+  const row = e.target.closest(".mrow");
+  if(!row) return;
+  const n = S.mkt.items[+row.dataset.i];
+  if(n) openArticle(n.uuid, n.title, n.publisher, n.link);
+});
+document.getElementById("mktMovers").addEventListener("click", e=>{
+  const el = e.target.closest(".idx");
+  if(el) openTicker(el.dataset.s);
+});
+document.getElementById("newsRefresh").onclick = ()=>loadMarketNews(true);
+
+/* ---------- search ---------- */
+S.search = {results:[], cursor:-1};
+const searchBox = document.getElementById("search");
+const searchDrop = document.getElementById("searchDrop");
+let searchTimer = null;
+
+function drawSearch(){
+  if(!S.search.results.length){ searchDrop.style.display="none"; return; }
+  searchDrop.innerHTML = S.search.results.map((r,i)=>
+    `<div class="sr${i===S.search.cursor?" on":""}" data-i="${i}">`
+    + `<span class="srs">${esc(r.symbol)}</span>`
+    + `<span class="srn">${esc(r.name)}</span>`
+    + `<span class="dim">${esc(r.exchange)}</span></div>`).join("");
+  searchDrop.style.display = "block";
+}
+
+async function runSearch(q){
+  if(!q || q.length < 1){ S.search.results=[]; drawSearch(); return; }
+  try{
+    const d = await api("/api/search?q="+encodeURIComponent(q));
+    // The box may have moved on while this was in flight.
+    if(searchBox.value.trim() !== q) return;
+    S.search.results = d.results||[]; S.search.cursor = -1;
+    drawSearch();
+  }catch(e){ /* search failing is not worth a toast */ }
+}
+
+function pickSearch(i){
+  const r = S.search.results[i];
+  if(!r) return;
+  searchBox.value = ""; S.search.results = []; drawSearch(); searchBox.blur();
+  openTicker(r.symbol);
+}
+
+searchBox.addEventListener("input", ()=>{
+  clearTimeout(searchTimer);
+  const q = searchBox.value.trim();
+  searchTimer = setTimeout(()=>runSearch(q), 180);
+});
+searchBox.addEventListener("keydown", e=>{
+  e.stopPropagation();   // the grid must not steal the arrow keys here
+  if(e.key==="ArrowDown"){
+    S.search.cursor = Math.min(S.search.cursor+1, S.search.results.length-1);
+    drawSearch(); e.preventDefault();
+  } else if(e.key==="ArrowUp"){
+    S.search.cursor = Math.max(S.search.cursor-1, 0); drawSearch();
+    e.preventDefault();
+  } else if(e.key==="Enter"){
+    // Enter with nothing highlighted opens exactly what was typed, so a
+    // ticker you already know needs no second keystroke.
+    if(S.search.cursor >= 0) pickSearch(S.search.cursor);
+    else if(searchBox.value.trim()){
+      const typed = searchBox.value.trim().toUpperCase();
+      searchBox.value = ""; S.search.results=[]; drawSearch(); searchBox.blur();
+      openTicker(typed);
+    }
+  } else if(e.key==="Escape"){
+    searchBox.value=""; S.search.results=[]; drawSearch(); searchBox.blur();
+  }
+});
+searchDrop.addEventListener("click", e=>{
+  const row = e.target.closest(".sr");
+  if(row) pickSearch(+row.dataset.i);
+});
+document.addEventListener("click", e=>{
+  if(!e.target.closest("#searchWrap")){
+    S.search.results=[]; drawSearch();
+  }
+});
+
+/* ---------- related companies -----------------------------------------
+   Not a supplier list. A real supply-chain graph is a paid dataset; what
+   EDGAR gives free is every company that named this one in its own annual
+   report, which catches suppliers, customers, licensors and competitors
+   together. Labelled for what it is, with the filing one click away so a
+   claim can be read rather than trusted. */
+S.rel = {symbol:null, rows:[], note:""};
+
+async function loadRelated(symbol){
+  const sym = (symbol || S.symbol || "").toUpperCase();
+  if(!sym) return;
+  S.rel.symbol = sym;
+  S.rel.note = "searching SEC filings…"; paneNote();
+  document.getElementById("relList").innerHTML = "";
+  try{
+    const d = await api("/api/related?symbol="+encodeURIComponent(sym));
+    if(S.rel.symbol !== sym) return;   // navigated away mid-request
+    S.rel.rows = d.related||[];
+    S.rel.note = d.error ? d.error
+      : `${S.rel.rows.length} companies name ${esc(d.searched||sym)} in their `
+        + `own filings — suppliers, customers and competitors alike`;
+    paneNote(); drawRelated();
+  }catch(e){
+    S.rel.note = "unavailable"; paneNote();
+    S.rel.rows = []; drawRelated();
+  }
+}
+
+function drawRelated(){
+  const el = document.getElementById("relList");
+  if(!S.rel.rows.length){
+    el.innerHTML = `<div class="dim" style="padding:5px 9px">`
+      + `nothing found in SEC filings</div>`;
+    return;
+  }
+  el.innerHTML = S.rel.rows.map(r=>{
+    // Same sector reads as a peer; a company in a different line of
+    // business that still bothered to name this one is more likely up or
+    // down the supply chain. A hint, not a fact.
+    const kind = r.kind==="peer" ? "peer" : r.kind==="chain" ? "chain" : "";
+    return `<div class="rel" data-sym="${esc(r.symbol)}" `
+      + `title="${esc(r.company)} — ${r.filings} filings mention it">`
+      + `<span class="rs">${esc(r.symbol)}</span>`
+      + `<span class="rk ${kind}">${kind}</span>`
+      + `<span class="rn">${esc(r.company)}</span>`
+      + `<span class="rc ${cls(r.change_pct)}">${fpct(r.change_pct)}</span>`
+      + `<span class="rf">${r.filings}</span></div>`;
+  }).join("");
+}
+
+document.getElementById("relList").addEventListener("click", e=>{
+  const row = e.target.closest(".rel");
+  if(row) openTicker(row.dataset.sym);
+});
+
+/* ---------- chart compare ---------- */
+S.compare = {symbol:null, bars:null};
+
+async function loadCompare(symbol){
+  const sym = (symbol||"").trim().toUpperCase();
+  S.compare.symbol = sym || null;
+  S.compare.bars = null;
+  if(!sym){ drawChart(); saveUi(); return; }
+  try{
+    const d = await api(`/api/ticker/${encodeURIComponent(sym)}`
+                        + `?range=${S.range}&interval=${S.interval}`);
+    if(S.compare.symbol !== sym) return;
+    S.compare.bars = d.bars || null;
+  }catch(e){ S.compare.bars = null; }
+  drawChart();
+  saveUi();
+}
+document.getElementById("cmpSym").addEventListener("keydown", e=>{
+  e.stopPropagation();
+  if(e.key==="Enter") loadCompare(e.target.value);
+});
+document.getElementById("cmpClear").onclick = ()=>{
+  document.getElementById("cmpSym").value = ""; loadCompare("");
+};
+
+/* ---------- alerts ---------- */
+S.alerts = {list:[], enabled:false};
+
+function alertsAllowed(){
+  return typeof Notification !== "undefined"
+         && Notification.permission === "granted";
+}
+
+async function toggleAlerts(){
+  if(typeof Notification === "undefined"){
+    say("this browser has no notifications", true); return;
+  }
+  if(Notification.permission !== "granted"){
+    const got = await Notification.requestPermission();
+    if(got !== "granted"){ say("notifications not allowed", true); return; }
+  }
+  S.alerts.enabled = !S.alerts.enabled;
+  document.getElementById("alertBell").classList.toggle("on", S.alerts.enabled);
+  say(S.alerts.enabled
+    ? "alerts on — you'll be told when something enters a saved screen"
+    : "alerts off");
+  saveUi();
+}
+
+function fireAlerts(list){
+  if(!list || !list.length) return;
+  S.alerts.list = list.concat(S.alerts.list).slice(0, 60);
+  const bell = document.getElementById("alertBell");
+  bell.textContent = `ALERTS ${S.alerts.list.length}`;
+  if(!S.alerts.enabled || !alertsAllowed()) return;
+  // One notification per screen rather than per symbol: five arrivals in
+  // one screen is one event, and five popups is how you get switched off.
+  const byScreen = {};
+  for(const a of list) (byScreen[a.screen] = byScreen[a.screen] || []).push(a.symbol);
+  for(const [name, syms] of Object.entries(byScreen)){
+    try{
+      new Notification(`${name}: ${syms.length} new`, {
+        body: syms.slice(0, 8).join(", "),
+        tag: "pm-"+name,      // replaces, never stacks
+      });
+    }catch(e){ /* notifications are best-effort */ }
+  }
+}
+
+/* ---------- article reader ----------
+   The page itself cannot be embedded — Yahoo sends X-Frame-Options
+   SAMEORIGIN and frame-ancestors 'self', so an iframe is refused. The
+   server fetches the story and extracts the body instead, keyed by an id
+   it has already served rather than by a URL. */
+async function openArticle(id, fallbackTitle, publisher, link){
+  const box = document.getElementById("reader");
+  document.getElementById("rdTitle").textContent = fallbackTitle || "";
+  document.getElementById("rdMeta").textContent = publisher || "";
+  const anchor = document.getElementById("rdLink");
+  anchor.href = link || "#";
+  document.getElementById("rdBody").innerHTML =
+    `<div class="note">fetching…</div>`;
+  box.style.display = "block";
+  try{
+    const d = await api("/api/article?id="+encodeURIComponent(id));
+    document.getElementById("rdTitle").textContent =
+      d.title || fallbackTitle || "";
+    document.getElementById("rdMeta").textContent =
+      `${d.host||""} · ${(d.paragraphs||[]).length} paragraphs`;
+    if(d.url) anchor.href = d.url;
+    const body = (d.paragraphs||[]).map(p=>`<p>${esc(p)}</p>`).join("");
+    // Say when extraction came up short instead of presenting a stub as
+    // if it were the article.
+    document.getElementById("rdBody").innerHTML =
+      (d.partial
+        ? `<div class="note">Only a fragment could be extracted from this `
+          + `publisher — open the original for the full piece.</div>` : "")
+      + (body || `<div class="note">No readable text found. `
+                 + `Open the original.</div>`);
+  }catch(e){
+    document.getElementById("rdBody").innerHTML =
+      `<div class="note">Could not load it here: ${esc(e.message)}. `
+      + `Use OPEN ORIGINAL.</div>`;
+  }
+}
+
+function closeReader(){
+  document.getElementById("reader").style.display = "none";
+}
+document.getElementById("rdClose").onclick = closeReader;
+document.getElementById("reader").onclick = e=>{
+  if(e.target.id === "reader") closeReader();
+};
+
+/* ---------- futures ---------- */
+async function loadFutures(){
+  try{
+    const d = await api("/api/futures");
+    const el = document.getElementById("futures");
+    if(!d.futures || !d.futures.length){ el.style.display="none"; return; }
+    const mins = d.lag_seconds ? Math.round(d.lag_seconds/60) : null;
+    el.innerHTML = d.futures.map(f=>
+      `<div class="idx" data-s="${esc(f.symbol)}"><b>${esc(f.label)}</b>`
+      + `<span class="px">${f.price!=null?f.price.toLocaleString(undefined,
+          {minimumFractionDigits:2,maximumFractionDigits:2}):"—"}</span>`
+      + `<span class="${cls(f.change_pct)}">${fpct(f.change_pct)}</span></div>`
+    ).join("")
+    // Measured, not assumed. If CME's delay changes, this changes with it.
+    + `<span id="futNote">FUT · DELAYED${mins!=null?" "+mins+"m":""}</span>`;
+    el.querySelectorAll(".idx").forEach(x=>
+      x.onclick = ()=>openTicker(x.dataset.s));
+  }catch(e){ /* strip is decoration */ }
+}
+
+/* ---------- ticker view ---------- */
+const RANGES = [
+  ["1D","1d","5m"], ["5D","5d","15m"], ["1M","1mo","1d"], ["6M","6mo","1d"],
+  ["YTD","ytd","1d"], ["1Y","1y","1d"], ["5Y","5y","1wk"], ["MAX","max","1mo"],
+];
+document.getElementById("ranges").innerHTML =
+  RANGES.map(([l,r,i])=>`<button data-r="${r}" data-i="${i}">${l}</button>`).join("");
+document.getElementById("ranges").onclick = e=>{
+  const b = e.target.closest("button"); if(!b) return;
+  S.range = b.dataset.r; S.interval = b.dataset.i;
+  if(S.symbol) openTicker(S.symbol);
+};
+
+async function openTicker(sym){
+  if(!sym) return;
+  S.symbol = sym.toUpperCase(); S.sel = S.symbol;
+  setView("ticker");
+  document.querySelectorAll("#ranges button").forEach(b=>
+    b.classList.toggle("on", b.dataset.r===S.range));
+  document.getElementById("tkSym").textContent = S.symbol;
+  document.getElementById("tkName").textContent = "loading…";
+  // Fired alongside the ticker request rather than after it: news comes
+  // from a different endpoint and there is no reason to make it queue.
+  loadNews(S.symbol);
+  loadRelated(S.symbol);
+  if(S.compare.symbol) loadCompare(S.compare.symbol);
+  try{
+    const d = await api(`/api/ticker/${encodeURIComponent(S.symbol)}`
+                        + `?range=${S.range}&interval=${S.interval}`);
+    S.ticker = d; renderTicker(d);
+  }catch(e){
+    document.getElementById("tkName").textContent = "";
+    say(e.message, true);
+  }
+}
+
+function renderTicker(d){
+  const st = d.stats||{}, q = d.quote||{};
+  const price = q.price!==undefined&&q.price!==null ? q.price : st.price;
+  const chg = q.change_pct!==undefined&&q.change_pct!==null
+              ? q.change_pct : st.change_pct;
+  document.getElementById("tkPx").textContent = nf(price,2);
+  document.getElementById("tkPx").className = cls(chg);
+  const ch = document.getElementById("tkChg");
+  ch.textContent = (q.change!==null&&q.change!==undefined ? nf(q.change,2)+"  " : "")
+                   + fpct(chg);
+  ch.className = cls(chg);
+  // The extended session sits beside the regular price, never merged into
+  // it — they are two different sessions and averaging them would misstate
+  // both.
+  const ext = document.getElementById("tkExt");
+  if(q.ext_label && q.ext_price!=null){
+    ext.innerHTML = `<span class="dim">${esc(q.ext_label)}</span> `
+      + `${nf(q.ext_price,2)} `
+      + `<span class="${cls(q.ext_change_pct)}">${fpct(q.ext_change_pct)}</span>`;
+    ext.style.display = "";
+  } else { ext.style.display = "none"; }
+  document.getElementById("tkName").textContent =
+    q.name || st.name || "";
+
+  const rows = [];
+  const kv = (k,v)=>rows.push(`<div class="kv"><span>${k}</span><span>${v}</span></div>`);
+  const kvc = (k,v,val)=>rows.push(
+    `<div class="kv"><span>${k}</span><span class="${cls(val)}">${v}</span></div>`);
+
+  rows.push(`<div class="sect">SNAPSHOT</div>`);
+  kv("Sector", esc(st.sector||"—"));
+  kv("Industry", esc(st.industry||"—"));
+  kv("Exchange", esc(st.exchange||"—"));
+  kv("Market cap", fcap(q.market_cap!=null?q.market_cap:st.market_cap));
+  kv("Volume", fvol(q.volume!=null?q.volume:st.volume));
+  kv("Avg vol 3m", fvol(st.avg_volume_3m));
+  kvc("Rel volume", nf(st.rel_volume,2),
+      st.rel_volume!=null ? st.rel_volume-1 : null);
+  kv("Day range", (q.day_low!=null? nf(q.day_low,2):"—")+" – "
+     +(q.day_high!=null? nf(q.day_high,2):"—"));
+  kv("Prev close", nf(q.prev_close!=null?q.prev_close:st.prev_close,2));
+
+  rows.push(`<div class="sect">VALUATION</div>`);
+  kv("P/E", nf(st.pe,2));
+  kv("Forward P/E", nf(st.forward_pe,2));
+  kv("P/B", nf(st.pb,2));
+  kv("EPS ttm", nf(st.eps_ttm,2));
+  kv("EPS fwd", nf(st.eps_forward,2));
+  kv("Dividend %", nf(st.dividend_yield,2));
+  kv("Shares out", fcap(st.shares_outstanding));
+
+  rows.push(`<div class="sect">TREND</div>`);
+  kvc("vs SMA50", fpct(st.pct_from_sma50,1), st.pct_from_sma50);
+  kvc("vs SMA200", fpct(st.pct_from_sma200,1), st.pct_from_sma200);
+  // Yahoo already ships this as a percentage (16.04 means +16.04%).
+  kvc("52w change", fpct(st.week52_change_pct,1), st.week52_change_pct);
+  kvc("From 52w high", fpct(st.pct_from_52w_high,1), st.pct_from_52w_high);
+  kv("Earnings in", st.earnings_days!=null
+     ? Math.round(st.earnings_days)+" days" : "—");
+
+  // 52-week range bar with the current price marked.
+  const lo = st.week52_low, hi = st.week52_high;
+  if(lo!=null && hi!=null && hi>lo && price!=null){
+    const p = Math.max(0, Math.min(1, (price-lo)/(hi-lo)));
+    rows.push(`<div class="sect">52 WEEK RANGE</div>`
+      + `<div class="kv"><span>${nf(lo,2)}</span><span>${nf(hi,2)}</span></div>`
+      + `<div id="rangeBar"><div id="rangeDot" style="left:${(p*100).toFixed(1)}%"></div></div>`);
+  }
+
+  document.getElementById("tkRight").innerHTML = rows.join("");
+
+  // Filings moved out of the stats column into their own tab — they were
+  // pushing the numbers people actually read off the bottom of it.
+  const fl = d.filings||[];
+  S.filings.note = fl.length ? `${fl.length} recent 10-K and 10-Q filings`
+    : (d.filings_error ? "unavailable"
+       : "none on file — common for ETFs and foreign issuers");
+  document.getElementById("filingList").innerHTML = fl.length
+    ? fl.map(f=>
+        `<a class="filing" target="_blank" rel="noopener" href="${esc(f.url)}">`
+        + `<span class="fdate">${esc(f.filingDate)}</span>`
+        + `<span class="fform">${esc(f.form)}</span>`
+        + `<span class="dim">${esc(f.reportDate||"")}</span></a>`).join("")
+    : `<div class="dim" style="padding:6px 9px">${esc(S.filings.note)}</div>`;
+  paneNote();
+  drawChart();
+}
+
+/* ---------- chart ---------- */
+const chartCanvas = document.getElementById("chart");
+let hoverX = null;
+
+/* Simple moving average. A window containing a gap yields null rather
+   than an average over fewer points — a "50-day average" computed from 43
+   days is a different statistic wearing the same label. */
+function sma(values, n){
+  const out = new Array(values.length).fill(null);
+  if(values.length < n) return out;
+  let sum = 0, gaps = 0;
+  for(let i=0;i<values.length;i++){
+    const v = values[i];
+    if(v==null) gaps++; else sum += v;
+    if(i>=n){
+      const old = values[i-n];
+      if(old==null) gaps--; else sum -= old;
+    }
+    if(i>=n-1 && gaps===0) out[i] = sum/n;
+  }
+  return out;
+}
+
+function drawChart(){
+  const c = chartCanvas, ctx = c.getContext("2d");
+  const W = c.width/devicePixelRatio, H = c.height/devicePixelRatio;
+  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+  ctx.fillStyle="#000"; ctx.fillRect(0,0,W,H);
+  const d = S.ticker; if(!d || !d.bars) return;
+  const b = d.bars;
+  const idx = [];
+  for(let i=0;i<b.t.length;i++) if(b.c[i]!==null&&b.c[i]!==undefined) idx.push(i);
+  if(idx.length<2){
+    ctx.fillStyle="#8a7550"; ctx.font="12px Consolas,monospace";
+    ctx.fillText(d.bars_error || "no price history for this symbol", 18, 26);
+    return;
+  }
+  const PAD = {l:8, r:62, t:10, b:20};
+  const volH = Math.max(28, H*0.16);
+  const plot = {x:PAD.l, y:PAD.t, w:W-PAD.l-PAD.r, h:H-PAD.t-PAD.b-volH-6};
+  const closes = idx.map(i=>b.c[i]);
+  let lo = Infinity, hi = -Infinity;
+  for(const i of idx){
+    lo = Math.min(lo, b.l[i]!=null?b.l[i]:b.c[i]);
+    hi = Math.max(hi, b.h[i]!=null?b.h[i]:b.c[i]);
+  }
+  const s50 = sma(closes,50), s200 = sma(closes,200);
+  for(const arr of [s50,s200]) for(const v of arr)
+    if(v!=null){ lo=Math.min(lo,v); hi=Math.max(hi,v); }
+  const pad = (hi-lo)*0.06 || 1; lo-=pad; hi+=pad;
+  const X = k => plot.x + (plot.w*(k+0.5))/idx.length;
+  const Y = v => plot.y + plot.h*(1-(v-lo)/(hi-lo));
+
+  // Shade the extended-hours regions before anything is drawn over them,
+  // so a 4am print is visibly not a 10am one.
+  const sess = d.sessions || {};
+  if(d.prepost){
+    const spanAt = k => b.t[idx[k]];
+    for(const [name, colour] of [["pre","rgba(255,160,0,.07)"],
+                                 ["post","rgba(90,130,255,.07)"]]){
+      for(const [start,end] of (sess[name]||[])){
+        let a=null, z=null;
+        for(let k=0;k<idx.length;k++){
+          const t = spanAt(k);
+          if(t>=start && (end==null || t<end)){ if(a===null) a=k; z=k; }
+        }
+        if(a===null) continue;
+        const x1 = X(a) - plot.w/idx.length/2, x2 = X(z) + plot.w/idx.length/2;
+        ctx.fillStyle = colour;
+        ctx.fillRect(Math.max(plot.x,x1), plot.y,
+                     Math.min(x2,plot.x+plot.w)-Math.max(plot.x,x1), plot.h);
+      }
+    }
+  }
+
+  // grid + price axis
+  ctx.strokeStyle="#1c1508"; ctx.fillStyle="#8a7550";
+  ctx.font="10px Consolas,monospace"; ctx.textBaseline="middle";
+  for(let g=0;g<=5;g++){
+    const v = lo+(hi-lo)*g/5, y = Y(v);
+    ctx.beginPath(); ctx.moveTo(plot.x,y); ctx.lineTo(plot.x+plot.w,y); ctx.stroke();
+    ctx.fillText(v.toFixed(2), plot.x+plot.w+6, y);
+  }
+
+  // volume
+  const vMax = Math.max(...idx.map(i=>b.v[i]||0)) || 1;
+  const vTop = plot.y+plot.h+6;
+  const bw = Math.max(1, plot.w/idx.length*0.7);
+  idx.forEach((i,k)=>{
+    const h = ((b.v[i]||0)/vMax)*volH;
+    const up = b.c[i] >= (b.o[i]!=null?b.o[i]:b.c[i]);
+    ctx.fillStyle = up ? "rgba(18,209,142,.42)" : "rgba(255,74,74,.42)";
+    ctx.fillRect(X(k)-bw/2, vTop+volH-h, bw, h);
+  });
+
+  // price: candles when there is room, a line when there is not
+  if(idx.length<=190 && plot.w/idx.length>3){
+    idx.forEach((i,k)=>{
+      const o=b.o[i], h=b.h[i], l=b.l[i], cl=b.c[i];
+      if(o==null||h==null||l==null) { return; }
+      const up = cl>=o;
+      ctx.strokeStyle = up ? "#12d18e" : "#ff4a4a";
+      ctx.fillStyle = up ? "#12d18e" : "#ff4a4a";
+      const x = X(k);
+      ctx.beginPath(); ctx.moveTo(x, Y(h)); ctx.lineTo(x, Y(l)); ctx.stroke();
+      const y1=Y(Math.max(o,cl)), y2=Y(Math.min(o,cl));
+      ctx.fillRect(x-bw/2, y1, bw, Math.max(1,y2-y1));
+    });
+  } else {
+    ctx.beginPath();
+    idx.forEach((i,k)=>{ const y=Y(b.c[i]); k?ctx.lineTo(X(k),y):ctx.moveTo(X(k),y); });
+    const first = b.c[idx[0]], last = b.c[idx[idx.length-1]];
+    ctx.strokeStyle = last>=first ? "#12d18e" : "#ff4a4a";
+    ctx.lineWidth = 1.3; ctx.stroke(); ctx.lineWidth = 1;
+  }
+
+  // Compare overlay. Both series are normalised to percent from their
+  // first close and drawn on their own scale — two stocks at $30 and $900
+  // share no price axis, and the question being asked is "which is
+  // winning", not "what do they cost".
+  if(S.compare.bars && S.compare.bars.c && S.compare.bars.c.length > 1){
+    const cb = S.compare.bars;
+    const ci = [];
+    for(let i=0;i<cb.c.length;i++) if(cb.c[i]!=null) ci.push(i);
+    if(ci.length > 1){
+      const base = cb.c[ci[0]];
+      const mine = b.c[idx[0]];
+      const pcts = idx.map(i=>(b.c[i]/mine - 1) * 100);
+      const theirs = ci.map(i=>(cb.c[i]/base - 1) * 100);
+      let lo2 = Math.min(...pcts, ...theirs), hi2 = Math.max(...pcts, ...theirs);
+      const pad2 = (hi2-lo2)*0.08 || 1; lo2 -= pad2; hi2 += pad2;
+      const PY2 = v => plot.y + plot.h*(1-(v-lo2)/(hi2-lo2));
+      const PX2 = k => plot.x + (plot.w*(k+0.5))/ci.length;
+
+      ctx.beginPath();
+      theirs.forEach((v,k)=>{ const x=PX2(k), y=PY2(v);
+        k?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+      ctx.strokeStyle = "#8a6bd4"; ctx.lineWidth = 1.4; ctx.stroke();
+      ctx.lineWidth = 1;
+
+      const last = theirs[theirs.length-1], mineLast = pcts[pcts.length-1];
+      ctx.font = "10px Consolas,monospace"; ctx.textBaseline = "top";
+      ctx.fillStyle = "#8a6bd4";
+      ctx.fillText(`${S.compare.symbol} ${last>=0?"+":""}${last.toFixed(1)}%`,
+                   plot.x+4, plot.y+14);
+      ctx.fillStyle = mineLast >= last ? "#12d18e" : "#ff4a4a";
+      ctx.fillText(`${S.symbol} ${mineLast>=0?"+":""}${mineLast.toFixed(1)}%`
+                   + `  (${mineLast>=last?"ahead":"behind"} by `
+                   + `${Math.abs(mineLast-last).toFixed(1)}pts)`,
+                   plot.x+4, plot.y+26);
+    }
+  }
+
+  // moving averages
+  const line = (arr,color)=>{
+    ctx.beginPath(); let started=false;
+    arr.forEach((v,k)=>{
+      if(v==null){ started=false; return; }
+      const x=X(k), y=Y(v);
+      if(!started){ ctx.moveTo(x,y); started=true; } else ctx.lineTo(x,y);
+    });
+    ctx.strokeStyle=color; ctx.stroke();
+  };
+  line(s50, "#ffa000");
+  line(s200, "#4a7fd4");
+
+  // date axis
+  ctx.fillStyle="#8a7550"; ctx.textBaseline="top";
+  const ticks = 6;
+  for(let g=0;g<=ticks;g++){
+    const k = Math.min(idx.length-1, Math.round(idx.length*g/ticks));
+    const dt = new Date(b.t[idx[k]]*1000);
+    const label = S.interval.endsWith("m")
+      ? dt.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})
+      : dt.toLocaleDateString([], {month:"short", day:"numeric",
+                                   year:"2-digit"});
+    const x = Math.min(X(k), plot.x+plot.w-52);
+    ctx.fillText(label, x-16, H-PAD.b+4);
+  }
+
+  // legend
+  ctx.textBaseline="top"; ctx.font="10px Consolas,monospace";
+  ctx.fillStyle="#ffa000"; ctx.fillText("SMA50", plot.x+4, plot.y+2);
+  ctx.fillStyle="#4a7fd4"; ctx.fillText("SMA200", plot.x+48, plot.y+2);
+  ctx.fillStyle="#8a7550";
+  ctx.fillText(`${idx.length} bars · ${S.range} · ${S.interval}`,
+               plot.x+104, plot.y+2);
+
+  // crosshair
+  if(hoverX!==null && hoverX>plot.x && hoverX<plot.x+plot.w){
+    const k = Math.max(0, Math.min(idx.length-1,
+      Math.round((hoverX-plot.x)/plot.w*idx.length-0.5)));
+    const i = idx[k];
+    ctx.strokeStyle="#5a410c"; ctx.setLineDash([2,3]);
+    ctx.beginPath(); ctx.moveTo(X(k),plot.y); ctx.lineTo(X(k),plot.y+plot.h);
+    ctx.stroke(); ctx.setLineDash([]);
+    const dt = new Date(b.t[i]*1000);
+    const txt = `${dt.toLocaleDateString()}  O ${nf(b.o[i],2)}  H ${nf(b.h[i],2)}`
+              + `  L ${nf(b.l[i],2)}  C ${nf(b.c[i],2)}  V ${fvol(b.v[i])}`;
+    ctx.fillStyle="#000"; ctx.fillRect(plot.x+2, plot.y+plot.h-14, ctx.measureText(txt).width+8, 13);
+    ctx.fillStyle="#ffc247"; ctx.fillText(txt, plot.x+6, plot.y+plot.h-14);
+  }
+}
+chartCanvas.addEventListener("mousemove", e=>{
+  hoverX = e.clientX - chartCanvas.getBoundingClientRect().left; drawChart();
+});
+chartCanvas.addEventListener("mouseleave", ()=>{ hoverX=null; drawChart(); });
+
+function sizeCanvases(){
+  for(const [c, redraw] of [[mapCanvas, drawMap],[chartCanvas, drawChart],
+                            [worldCanvas, drawWorld]]){
+    const p = c.parentElement;
+    if(!p.clientWidth || !p.clientHeight) continue;
+    c.width = p.clientWidth*devicePixelRatio;
+    c.height = p.clientHeight*devicePixelRatio;
+    c.style.width = p.clientWidth+"px";
+    c.style.height = p.clientHeight+"px";
+    redraw();
+  }
+}
+
+/* ---------- saved screens ---------- */
+async function loadSaved(){
+  try{
+    const d = await api("/api/screens");
+    await loadDiffs();
+    const el = document.getElementById("saved");
+    const list = d.screens||[];
+    // What changed since the previous run. A screen with only one run
+    // shows its size instead of a diff — claiming everything just
+    // arrived would be false.
+    const badge = name => {
+      const f = S.diffs[name];
+      if(!f || !f.runs) return `<span class="dif dim">not run yet</span>`;
+      if(f.runs < 2) return `<span class="dif dim">${f.count} matches</span>`;
+      const inn = f.entered.length, out = f.exited.length;
+      if(!inn && !out) return `<span class="dif dim">${f.count} · no change</span>`;
+      return `<span class="dif">${f.count} · `
+        + (inn ? `<span class="up">+${inn}</span> ` : "")
+        + (out ? `<span class="dn">-${out}</span>` : "")
+        + `</span>`;
+    };
+    el.innerHTML = `<h3 class="hd">SAVED SCREENS</h3>`
+      + (list.length ? list.map(s=>
+          `<div class="sv" data-n="${esc(s.name)}"><b>${esc(s.name)}</b>`
+          + `<code>${esc(s.expr)}</code>${badge(s.name)}`
+          + `<span class="x" data-del="${esc(s.name)}">DEL</span></div>`
+          + diffDetail(s.name)
+        ).join("")
+        : `<div class="dim" style="padding:6px">none yet — run a screen and type <span class="amber">save myscreen</span></div>`);
+    el.querySelectorAll(".wsym").forEach(s=>{
+      s.onclick = e=>{ e.stopPropagation(); openTicker(s.dataset.sym); };
+    });
+    el.querySelectorAll(".sv").forEach(row=>{
+      row.onclick = e=>{
+        if(e.target.dataset.del){
+          api("/api/screens", {body:{action:"delete", name:e.target.dataset.del}})
+            .then(loadSaved).catch(err=>say(err.message,true));
+          return;
+        }
+        const s = list.find(x=>x.name===row.dataset.n);
+        if(s){ applyExpr(s.expr); setView("screen"); say("loaded "+s.name); }
+      };
+    });
+  }catch(e){ say(e.message, true); }
+}
+
+/* The actual symbols that moved in or out, under the screen they belong
+   to. This is the thing the append-only snapshot design was for. */
+function diffDetail(name){
+  const f = S.diffs[name];
+  if(!f || f.runs < 2 || (!f.entered.length && !f.exited.length)) return "";
+  const when = f.since
+    ? new Date(f.since*1000).toLocaleTimeString([], {hour:"2-digit",
+                                                    minute:"2-digit"})
+    : "";
+  const list = (syms, klass, sign) => syms.length
+    ? `<span class="${klass}">${sign}</span> `
+      + syms.slice(0, 14).map(s=>
+          `<span class="wsym" data-sym="${esc(s)}">${esc(s)}</span>`).join(" ")
+      + (syms.length > 14 ? ` <span class="dim">+${syms.length-14}</span>` : "")
+    : "";
+  return `<div class="dif-detail dim">since ${esc(when)} &nbsp;`
+    + list(f.entered, "up", "in") + (f.entered.length && f.exited.length
+        ? " &nbsp; " : "")
+    + list(f.exited, "dn", "out") + `</div>`;
+}
+
+function applyExpr(expr){
+  S.expr = expr; S.filters = {};
+  document.querySelectorAll("#filters select").forEach(s=>{
+    s.value="Any"; s.classList.remove("set");
+  });
+  runScreen();
+}
+
+/* ---------- persistence ----------
+   Rebuilding your filters on every reload is the difference between a
+   tool and a demo. Versioned, so a future change discards old state
+   cleanly instead of half-restoring it into a crash. */
+const UI_KEY = "quantpilot.ui.v1";
+// Read-through for layouts saved before the rename, so filters, sort and
+// view survive it. Dropped once, on the next save under the new key.
+const UI_KEY_LEGACY = "pilotmarkets.ui.v1";
+let saveTimer = null;
+
+function saveUi(immediate){
+  clearTimeout(saveTimer);
+  // Debounced, because a scroll or a burst of filter changes would
+  // otherwise write on every keystroke — but flushable, because a
+  // debounced write loses the last change when the window closes.
+  const write = ()=>{
+    try{
+      localStorage.setItem(UI_KEY, JSON.stringify({
+        view: S.view, filters: S.filters, expr: S.expr,
+        sort: S.sort, dir: S.dir,
+        world: {layout:S.world.layout, scope:S.world.scope},
+        adrCountry: (document.getElementById("adrCountry")||{}).value,
+        newsStrict: S.news.strict,
+        alerts: S.alerts.enabled,
+        pane: S.pane,
+        compare: S.compare.symbol,
+        earnDays: (document.getElementById("earnDays")||{}).value,
+        earnCap: (document.getElementById("earnCap")||{}).value,
+        range: S.range, interval: S.interval,
+        watchOpen: S.watch.open,
+        mapCount: (document.getElementById("mapCount")||{}).value,
+      }));
+    }catch(e){ /* private mode, quota — never break the page over it */ }
+  };
+  if(immediate) write(); else saveTimer = setTimeout(write, 250);
+}
+window.addEventListener("beforeunload", ()=>saveUi(true));
+
+function loadUi(){
+  let saved = null;
+  try{ saved = JSON.parse(localStorage.getItem(UI_KEY)
+                          || localStorage.getItem(UI_KEY_LEGACY) || "null"); }
+  catch(e){ saved = null; }
+  if(!saved || typeof saved !== "object") return null;
+  S.filters = (saved.filters && typeof saved.filters === "object")
+              ? saved.filters : {};
+  S.expr = typeof saved.expr === "string" ? saved.expr : "";
+  if(saved.sort) S.sort = saved.sort;
+  if(saved.dir) S.dir = saved.dir;
+  if(saved.world){
+    S.world.layout = saved.world.layout==="tiles" ? "tiles" : "bubbles";
+    S.world.scope  = saved.world.scope==="adr" ? "adr" : "all";
+  }
+  if(saved.newsStrict) S.news.strict = true;
+  if(saved.alerts) S.alerts.enabled = true;
+  if(saved.pane) S.pane = saved.pane;
+  if(saved.compare) S.compare.symbol = saved.compare;
+  if(saved.range){ S.range = saved.range; S.interval = saved.interval || "1d"; }
+  if(saved.watchOpen === false) S.watch.open = false;
+  return saved;
+}
+
+function applySavedControls(saved){
+  if(!saved) return;
+  document.querySelectorAll("#filters select[data-f]").forEach(sel=>{
+    const v = S.filters[sel.dataset.f];
+    if(v && [...sel.options].some(o=>o.value===v || o.textContent===v)){
+      sel.value = v; sel.classList.add("set");
+    }
+  });
+  for(const [id, key] of [["earnDays","earnDays"],["earnCap","earnCap"]]){
+    const el = document.getElementById(id);
+    if(el && saved[key]) el.value = saved[key];
+  }
+  const mc = document.getElementById("mapCount");
+  if(saved.mapCount && mc) mc.value = saved.mapCount;
+  document.getElementById("newsStrict").checked = S.news.strict;
+  setPane(S.pane || "news");
+  document.getElementById("alertBell").classList.toggle("on", S.alerts.enabled);
+  if(S.compare.symbol) document.getElementById("cmpSym").value = S.compare.symbol;
+  document.getElementById("wBubbles").classList.toggle("on", S.world.layout==="bubbles");
+  document.getElementById("wTiles").classList.toggle("on", S.world.layout==="tiles");
+  document.getElementById("wAll").classList.toggle("on", S.world.scope==="all");
+  document.getElementById("wAdr").classList.toggle("on", S.world.scope==="adr");
+  document.getElementById("watchPanel").classList.toggle("off", !S.watch.open);
+  S._savedAdrCountry = saved.adrCountry;
+}
+
+/* ---------- keyboard navigation ----------
+   A terminal you have to reach for the mouse to use is not a terminal. */
+S.cursor = -1;
+
+function moveCursor(delta, absolute){
+  if(!S.rows.length) return;
+  const next = absolute!=null ? absolute
+             : (S.cursor < 0 ? 0 : S.cursor + delta);
+  S.cursor = Math.max(0, Math.min(S.rows.length-1, next));
+  const row = S.rows[S.cursor];
+  S.sel = row ? row.symbol : null;
+  // Keep the cursor in view without yanking the whole list around.
+  const top = S.cursor*ROW_H, bottom = top + ROW_H;
+  if(top < wrap.scrollTop) wrap.scrollTop = top;
+  else if(bottom > wrap.scrollTop + wrap.clientHeight)
+    wrap.scrollTop = bottom - wrap.clientHeight;
+  drawRows(true);
+  const el = spacer.querySelector(`.r[data-i="${S.cursor}"]`);
+  if(el) el.classList.add("cur");
+  // Arrowing somewhere is a deliberate move; it takes the strip back off
+  // whatever the mouse happened to be resting on.
+  S.hover = -1;
+  paintStrip();
+}
+
+function gridKeys(e){
+  if(S.view!=="screen" || !S.rows.length) return false;
+  const page = Math.max(1, Math.floor(wrap.clientHeight/ROW_H) - 1);
+  switch(e.key){
+    case "ArrowDown": moveCursor(1); return true;
+    case "ArrowUp":   moveCursor(-1); return true;
+    case "PageDown":  moveCursor(page); return true;
+    case "PageUp":    moveCursor(-page); return true;
+    case "Home":      moveCursor(0, 0); return true;
+    case "End":       moveCursor(0, S.rows.length-1); return true;
+    case "Enter":
+      if(S.cursor>=0 && S.rows[S.cursor]) openTicker(S.rows[S.cursor].symbol);
+      return true;
+    case "w": case "W":
+      if(S.cursor>=0 && S.rows[S.cursor]) toggleWatch(S.rows[S.cursor].symbol);
+      return true;
+    default: return false;
+  }
+}
+
+/* ---------- views ---------- */
+function setView(v){
+  if(v==="help"){ document.getElementById("help").style.display="block"; return; }
+  S.view = v;
+  document.querySelectorAll(".view").forEach(el=>
+    el.classList.toggle("on", el.id==="view-"+v));
+  document.querySelectorAll(".tab").forEach(el=>
+    el.classList.toggle("on", el.dataset.view===v));
+  requestAnimationFrame(()=>{
+    sizeCanvases();
+    if(v==="map" && !S.cells.length) loadMap();
+    if(v==="world" && !S.world.rows.length) loadWorld();
+    if(v==="adr" && !S.adr.rows.length) loadAdr();
+    if(v==="earnings" && !S.earn.days.length) loadEarnings();
+    if(v==="news" && !S.mkt.items.length) loadMarketNews();
+    if(v==="livenews" && !S.livenews.loaded) loadLiveNews();
+    if(v==="saved") loadSaved();
+    if(v==="screen") drawRows(true);
+  });
+  saveUi();
+}
+document.querySelectorAll(".tab").forEach(t=> t.onclick = ()=>setView(t.dataset.view));
+
+/* ---------- header / status ---------- */
+function paintStatus(s){
+  S.status = s;
+  const sb = document.getElementById("stateBadge");
+  const state = (s.market_state||"").toUpperCase();
+  // PREPRE is the overnight gap before the pre-market session opens, and
+  // POSTPOST the one after after-hours ends. Both mean closed.
+  // Overnight is a real session, not a gap. US equities trade on ATS
+  // venues from about 20:00 to 04:00 ET — which is the middle of the day
+  // in India — and the stream proves it by delivering ticks. Saying
+  // CLOSED while prices move on screen is what made the flashing look
+  // like a bug.
+  const label = s.overnight ? "OVERNIGHT"
+    : {REGULAR:"MARKET OPEN", PRE:"PRE-MARKET", POST:"AFTER HOURS",
+       PREPRE:"CLOSED", POSTPOST:"CLOSED", CLOSED:"CLOSED"}[state]
+      || (state||"UNKNOWN");
+  sb.textContent = label;
+  sb.className = "badge " + (state==="REGULAR" ? "live"
+                  : (s.overnight||state==="PRE"||state==="POST") ? "delayed"
+                  : "closed");
+  const lb = document.getElementById("lagBadge");
+  if(s.lag_seconds===null||s.lag_seconds===undefined){
+    lb.textContent = "LAG —"; lb.className="badge";
+  } else {
+    const l = s.lag_seconds;
+    lb.textContent = l<60 ? `LAG ${l.toFixed(0)}s`
+                   : l<3600 ? `LAG ${(l/60).toFixed(0)}m`
+                   : `LAG ${(l/3600).toFixed(1)}h`;
+    lb.className = "badge " + (l<20 ? "live" : l<900 ? "delayed" : "closed");
+  }
+  // How the prices on screen are actually arriving. STREAM means pushed
+  // trades; POLL means we are asking every few seconds; OFF means the
+  // streaming stack isn't installed. Never claim the first while doing
+  // the second.
+  S.stream = s.stream || S.stream;
+  const st = s.stream || {};
+  const sb2 = document.getElementById("streamBadge");
+  if(!st.available){ sb2.textContent = "POLL"; sb2.className = "badge"; }
+  else if(st.healthy){
+    // The delay is Yahoo's, measured here from the venue's own timestamp
+    // on each print — around three seconds, and shown rather than implied
+    // away. STREAM without a number would read as instant.
+    const l = st.latency;
+    sb2.textContent = `STREAM ${st.subscribed||0}`
+      + (l!=null ? ` · ${l<10 ? l.toFixed(1) : l.toFixed(0)}s` : "");
+    sb2.className = "badge " + (l==null || l<10 ? "live" : "delayed");
+    sb2.title = l!=null
+      ? `${st.subscribed||0} symbols · median ${l.toFixed(1)}s behind the `
+        + `venue timestamp over the last ${st.samples||0} prints`
+      : `${st.subscribed||0} symbols subscribed`;
+  } else if(st.connected){
+    sb2.textContent = "STREAM QUIET"; sb2.className = "badge delayed";
+  } else {
+    sb2.textContent = "POLL"; sb2.className = "badge delayed";
+    sb2.title = st.error || "";
+  }
+  if(s.build_at){
+    const b = new Date(s.build_at*1000);
+    const el = document.getElementById("buildInfo");
+    el.textContent = "build " + b.toLocaleString([], {month:"short", day:"numeric",
+                       hour:"2-digit", minute:"2-digit"});
+    // If the page was loaded before the code was built, this window is
+    // running older JavaScript than the server has on disk.
+    const stale = s.build_at*1000 > PAGE_LOADED_AT;
+    el.className = stale ? "badge err" : "dim";
+    if(stale) el.title = "this page is older than the server's code — reload";
+  }
+  const age = s.snapshot_age;
+  document.getElementById("snapInfo").textContent =
+    s.rows ? `snapshot ${s.rows.toLocaleString()} symbols · `
+             + (age<90 ? `${age.toFixed(0)}s` :
+                age<5400 ? `${(age/60).toFixed(0)}m` : `${(age/3600).toFixed(1)}h`)
+             + ` old${s.stale?" · STALE":""}`
+           : "no snapshot";
+  const prog = document.getElementById("prog");
+  prog.style.display = s.refreshing ? "block" : "none";
+  if(s.refreshing){
+    document.getElementById("progBar").style.width =
+      ((s.progress&&s.progress.frac||0)*100).toFixed(1)+"%";
+    if(s.progress&&s.progress.message) say("refresh: "+s.progress.message);
+  }
+  if(s.error) say(s.error, true);
+  scheduleTick(s.tick_seconds||3);
+}
+
+function scheduleTick(sec){
+  if(S.tickTimer && S._tickSec===sec) return;
+  clearInterval(S.tickTimer); S._tickSec = sec;
+  S.tickTimer = setInterval(tickNow, Math.max(3, sec)*1000);
+}
+
+async function loadIndices(){
+  try{
+    const d = await api("/api/indices");
+    const strip = document.getElementById("strip");
+    if(!d.indices || !d.indices.length){
+      strip.innerHTML = `<span id="stripNote">indices unavailable`
+        + (d.error?": "+esc(d.error):"")+`</span>`;
+      return;
+    }
+    strip.innerHTML = d.indices.map(i=>
+      `<div class="idx" data-s="${esc(i.symbol)}"><b>${esc(i.label)}</b>`
+      + `<span class="px">${i.price!=null?i.price.toLocaleString(undefined,
+          {minimumFractionDigits:2, maximumFractionDigits:2}):"—"}</span>`
+      + `<span class="${cls(i.change_pct)}">${fpct(i.change_pct)}`
+      + `${i.change_pct>0?" ▲":i.change_pct<0?" ▼":""}</span></div>`
+    // 24-hour, like the header clock: the default renders AM/PM by system
+    // locale, which reads oddly two inches from a 24-hour ET reading.
+    ).join("") + `<span id="stripNote">`
+      + `${new Date().toLocaleTimeString([], {hour12:false})}</span>`;
+    strip.querySelectorAll(".idx").forEach(el=>
+      el.onclick = ()=>openTicker(el.dataset.s));
+  }catch(e){ /* the strip is decoration; never let it break the terminal */ }
+}
+
+/* ---------- command line ---------- */
+const input = document.getElementById("cmdIn");
+let msgTimer = null;
+function say(text, isError){
+  const m = document.getElementById("msg");
+  m.textContent = text || "";
+  m.className = isError ? "err" : "";
+  clearTimeout(msgTimer);
+  if(text) msgTimer = setTimeout(()=>{ m.textContent=""; }, 7000);
+}
+
+async function runCommand(raw){
+  const line = raw.trim();
+  if(!line) return;
+  S.history.push(line); S.hpos = S.history.length;
+  const [head, ...rest] = line.split(/\s+/);
+  const arg = rest.join(" ");
+  const cmd = head.toLowerCase();
+
+  if(cmd==="help"){ document.getElementById("help").style.display="block"; return; }
+  if(cmd==="clear"){ clearAll(); return; }
+  if(["scrn","screener","grid"].includes(cmd)){ setView("screen"); return; }
+  if(cmd==="heat"||cmd==="heatmap"){ setView("map"); loadMap(); return; }
+  if(["map","world","globe"].includes(cmd)){ setView("world"); loadWorld(); return; }
+  if(cmd==="adr"||cmd==="adrs"){ setView("adr"); loadAdr(); return; }
+  if(["earn","earnings","cal","calendar"].includes(cmd)){
+    setView("earnings"); loadEarnings(); return;
+  }
+  if(cmd==="news"){
+    if(arg) openTicker(arg.toUpperCase());
+    else { setView("news"); loadMarketNews(); }
+    return;
+  }
+  if(cmd==="vs"||cmd==="compare"){
+    document.getElementById("cmpSym").value = (arg||"").toUpperCase();
+    loadCompare(arg); if(S.symbol) setView("ticker"); return;
+  }
+  if(cmd==="alerts"){ toggleAlerts(); return; }
+  if(["find","search","lookup"].includes(cmd)){
+    searchBox.focus(); searchBox.value = arg || "";
+    if(arg) runSearch(arg);
+    return;
+  }
+  if(cmd==="watch"||cmd==="w"){
+    if(arg) toggleWatch(arg.toUpperCase());
+    else {
+      S.watch.open = !S.watch.open;
+      document.getElementById("watchPanel").classList.toggle("off", !S.watch.open);
+      saveUi();
+    }
+    return;
+  }
+  if(cmd==="chart"||cmd==="chrt"){ setView("ticker"); return; }
+  if(cmd==="saved"||cmd==="screens"){ setView("saved"); return; }
+  if(cmd==="refresh"){
+    try{ await api("/api/refresh",{body:{}}); say("universe refresh started"); }
+    catch(e){ say(e.message,true); }
+    return;
+  }
+  if(cmd==="screen"||cmd==="s"){
+    S.expr = arg; setView("screen"); await runScreen(); say(arg?("screen: "+arg):"screen cleared");
+    return;
+  }
+  if(cmd==="save"){
+    if(!arg) return say("usage: save <name>", true);
+    const expr = S.lastExpr || S.expr || "";
+    if(!expr) return say("nothing to save — run a screen first", true);
+    try{
+      await api("/api/screens", {body:{action:"save", name:arg, expr}});
+      say(`saved ${arg}  —  ${expr}`); loadSaved();
+    }catch(e){ say(e.message,true); }
+    return;
+  }
+  if(cmd==="load"){
+    try{
+      const d = await api("/api/screens");
+      const s = (d.screens||[]).find(x=>x.name.toLowerCase()===arg.toLowerCase());
+      if(!s) return say("no saved screen called "+arg, true);
+      applyExpr(s.expr); setView("screen"); say("loaded "+s.name);
+    }catch(e){ say(e.message,true); }
+    return;
+  }
+  if(cmd==="del"||cmd==="delete"){
+    try{ await api("/api/screens",{body:{action:"delete", name:arg}});
+         say("deleted "+arg); loadSaved(); }
+    catch(e){ say(e.message,true); }
+    return;
+  }
+  // A bare expression (contains an operator) runs as a screen; anything
+  // else that looks like a ticker opens the ticker view.
+  if(/[<>=]|\band\b|\bor\b|\bin\b/i.test(line)){
+    S.expr = line; setView("screen"); await runScreen(); say("screen: "+line);
+    return;
+  }
+  if(/^[A-Za-z.\-^=]{1,12}$/.test(line)){ openTicker(line.toUpperCase()); return; }
+  say("unknown command — type help", true);
+}
+
+input.addEventListener("keydown", e=>{
+  if(e.key==="Enter"){ const v=input.value; input.value=""; runCommand(v); }
+  else if(e.key==="ArrowUp"){
+    if(S.hpos>0){ S.hpos--; input.value = S.history[S.hpos]||""; }
+    e.preventDefault();
+  }
+  else if(e.key==="ArrowDown"){
+    if(S.hpos<S.history.length-1){ S.hpos++; input.value=S.history[S.hpos]||""; }
+    else { S.hpos=S.history.length; input.value=""; }
+    e.preventDefault();
+  }
+  else if(e.key==="Escape"){ input.blur(); }
+});
+
+document.addEventListener("keydown", e=>{
+  if(e.key==="Escape"
+     && document.getElementById("reader").style.display==="block"){
+    closeReader(); return;
+  }
+  const helpOpen = document.getElementById("help").style.display==="block";
+  if(e.key==="Escape" && helpOpen){
+    document.getElementById("help").style.display="none"; return;
+  }
+  const keys = {F1:"help", F2:"screen", F3:"map", F4:"ticker", F5:"saved",
+                F6:"world", F7:"adr", F8:"earnings", F9:"news", F10:"livenews"};
+  if(keys[e.key]){ e.preventDefault(); setView(keys[e.key]); return; }
+  const tag = (e.target.tagName||"").toUpperCase();
+  if(tag==="INPUT"||tag==="SELECT"||tag==="TEXTAREA") return;
+  // Grid navigation gets first refusal on the arrow keys, so the terminal
+  // is usable without ever reaching for the mouse.
+  if(gridKeys(e)){ e.preventDefault(); return; }
+  if(e.key==="/"){ e.preventDefault(); searchBox.focus(); }
+  else if(e.key===">"){ e.preventDefault(); input.focus(); }
+  else if(/^[a-zA-Z]$/.test(e.key) && !e.ctrlKey && !e.altKey && !e.metaKey){
+    input.focus(); // start typing a ticker anywhere, like a real terminal
+  }
+});
+document.getElementById("help").onclick = e=>{
+  if(e.target.id==="help") e.currentTarget.style.display="none";
+};
+document.getElementById("refreshBtn").onclick = ()=>runCommand("refresh");
+document.getElementById("alertBell").onclick = toggleAlerts;
+
+/* ---------- boot ---------- */
+function clock(){
+  const now = new Date();
+  const et = now.toLocaleTimeString("en-US", {timeZone:"America/New_York",
+    hour12:false});
+  document.getElementById("clock").textContent =
+    `${et} ET · ${now.toLocaleTimeString([], {hour12:false})} local`;
+}
+
+function connectEvents(){
+  const es = new EventSource("/api/events?token="+encodeURIComponent(TOKEN));
+  es.addEventListener("status", e=>paintStatus(JSON.parse(e.data)));
+  es.addEventListener("alerts", e=>{
+    const d = JSON.parse(e.data);
+    fireAlerts(d.alerts || []);
+  });
+  es.addEventListener("ticks", e=>{
+    const d = JSON.parse(e.data);
+    applyTicks(d.quotes || {});
+    applyWatchTicks(d.quotes || {});
+  });
+  es.addEventListener("refresh_start", ()=>say("rebuilding the universe…"));
+  es.addEventListener("refresh_progress", e=>{
+    const d = JSON.parse(e.data);
+    document.getElementById("prog").style.display="block";
+    document.getElementById("progBar").style.width=((d.frac||0)*100).toFixed(1)+"%";
+    say("refresh: "+d.message);
+  });
+  es.addEventListener("refresh_done", e=>{
+    const d = JSON.parse(e.data);
+    document.getElementById("prog").style.display="none";
+    say(`universe rebuilt — ${d.rows} symbols in ${d.elapsed.toFixed(0)}s`);
+    runScreen(true); loadMap(); loadIndices();
+  });
+  es.addEventListener("refresh_error", e=>{
+    document.getElementById("prog").style.display="none";
+    say("refresh failed: "+JSON.parse(e.data).error, true);
+  });
+  es.onerror = ()=>{ /* EventSource reconnects on its own */ };
+}
+
+async function boot(){
+  clock(); setInterval(clock, 1000);
+  const saved = loadUi();
+  // Everything the first paint needs, in flight at once. Sequential
+  // awaits here used to cost the sum of four round trips before a single
+  // row appeared.
+  const [filters, status] = await Promise.all([
+    api("/api/filters").catch(e=>{ say(e.message, true); return null; }),
+    api("/api/status").catch(e=>{ say(e.message, true); return null; }),
+  ]);
+  if(filters){
+    buildFilters(filters.filters);
+    document.getElementById("fieldList").textContent =
+      (filters.fields||[]).join(" · ");
+  }
+  applySavedControls(saved);
+  if(status) paintStatus(status);
+  buildHead();
+  paintStrip();
+  // The grid is what you are waiting for; the rest can arrive behind it.
+  const grid = runScreen();
+  loadWatch();
+  loadIndices(); setInterval(loadIndices, 20000);
+  loadFutures(); setInterval(loadFutures, 60000);
+  connectEvents();
+  await grid;
+  // Restore the view last, so whatever it loads sees the restored filters.
+  if(saved && saved.view && saved.view!=="screen"
+     && document.getElementById("view-"+saved.view)) setView(saved.view);
+  sizeCanvases();
+  input.focus();
+}
+
+boot();
+</script>
+</body>
+</html>
