@@ -23,8 +23,13 @@ APP_NAME = "QuantPilot"
 DEFAULTS = {
     "host": "127.0.0.1",
     "port": 8900,
-    # How often the browser asks for fresh quotes on visible rows.
-    "tick_seconds": 5,
+    # How often the browser asks for fresh quotes on visible rows. This is
+    # the fallback cadence — while the websocket is healthy prices arrive
+    # pushed, and the poll only covers rows the stream has gone quiet on.
+    # Three seconds against a two-second server-side cache, so a poll
+    # nearly always costs a real round trip rather than returning what it
+    # returned last time.
+    "tick_seconds": 3,
     # Backoff once the exchange reports it is closed.
     "closed_tick_seconds": 60,
     # A universe snapshot older than this is considered stale on boot.

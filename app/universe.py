@@ -21,7 +21,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import pandas as pd
 
-from . import config, store
+from . import calendars, config, store
 from .providers import nasdaq, yahoo
 from .providers.base import ProviderError
 
@@ -320,6 +320,12 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
     # number that says which, the same way `day_range_pct` does for a day.
     df["pct_52w_range"] = safe(
         df["price"] - df["week52_low"], df["week52_high"] - df["week52_low"]) * 100
+    # How wide the 52-week range itself is, as a percent of the low. Two
+    # names can share the same `pct_52w_range` reading — say, both sitting
+    # at the midpoint — and still be nothing alike: one range is a tight
+    # channel, the other a wild swing. This is the missing scale.
+    df["range_52w_width"] = safe(
+        df["week52_high"] - df["week52_low"], df["week52_low"]) * 100
     df["pct_from_sma50"] = safe(df["price"] - df["sma50"], df["sma50"]) * 100
     df["pct_from_sma200"] = safe(df["price"] - df["sma200"], df["sma200"]) * 100
     # SMA50 vs SMA200 as a percent apart — the golden-cross distance.
@@ -352,11 +358,49 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
         df["rs_sector"] = np.nan
 
     df["earnings_days"] = (df["earnings_ts"] - time.time()) / 86400.0
+
+    # Days until the stock trades without its next dividend. Negative for
+    # one that went ex in the last day, which is deliberate: buying the
+    # morning *after* is a different trade from buying the morning before,
+    # and rounding both to zero would hide the only distinction that
+    # matters here. Null where no dividend is scheduled inside the
+    # calendar's window — which is not the same fact as "pays nothing",
+    # and is why this stays NaN rather than becoming a large number.
+    if "ex_div_ts" in df.columns:
+        now = time.time()
+        df["ex_div_days"] = (df["ex_div_ts"] - now) / 86400.0
+        df["div_record_days"] = (df["div_record_ts"] - now) / 86400.0
+        df["div_pay_days"] = (df["div_pay_ts"] - now) / 86400.0
+        # What the upcoming payment alone is worth against today's price,
+        # as a percent — the size of the drop to expect on the ex-date.
+        # Distinct from `dividend_yield`, which is annual: on a quarterly
+        # payer this is roughly a quarter of it, and on a special it is
+        # not related to it at all.
+        df["div_drop_pct"] = safe(df["div_amount"] * 100.0, df["price"])
+        # The annual rate Nasdaq indicates, against today's price. Yahoo's
+        # `dividend_yield` is computed from its own trailing figure and
+        # the two disagree whenever a payer has just raised or cut, which
+        # is exactly when someone is looking.
+        df["div_yield_upcoming"] = safe(df["div_annual_amount"] * 100.0,
+                                        df["price"])
+    else:
+        for col in ("ex_div_days", "div_record_days", "div_pay_days",
+                    "div_drop_pct", "div_yield_upcoming"):
+            df[col] = np.nan
+
+    # Days since listing, for screening what has just come to market. Only
+    # `ipo_year` is in the snapshot, so this is a year, not a date — good
+    # enough to separate this year's listings from last decade's, and
+    # deliberately not dressed up as a precision it does not have.
+    if "ipo_year" in df.columns:
+        this_year = datetime.now(EASTERN).year
+        df["ipo_age_years"] = this_year - df["ipo_year"]
+    else:
+        df["ipo_age_years"] = np.nan
     # When in the day a company reports. Before the open and after the
     # close are different risks entirely: one gaps the stock before you can
     # react, the other moves it while the market is shut.
     df["earnings_when"] = _earnings_when(df["earnings_ts"])
-    df["peg"] = np.nan  # needs growth estimates; left honest rather than faked
     # Earnings yield: trailing EPS as a percent of price, the reciprocal of
     # P/E. A P/E is meaningless on a loss-making name — the ratio flips sign
     # and screens like `pe < 15` silently exclude it rather than flag the
@@ -376,6 +420,26 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
                                  df["eps_ttm"].abs()) * 100
     else:
         df["eps_growth"] = np.nan
+    # PEG: P/E against forward growth, the ratio a bare multiple can't give.
+    # `eps_growth` above finally supplies the missing term. Null whenever
+    # growth is zero or negative rather than dividing by it — a shrinking
+    # or flat estimate would flip the sign into something that reads like
+    # a bargain when it is actually a business going backwards.
+    if "pe" in df.columns:
+        df["peg"] = safe(df["pe"], df["eps_growth"].where(df["eps_growth"] > 0))
+    else:
+        df["peg"] = np.nan
+    # Payout ratio: the dividend as a percent of trailing EPS — is the
+    # dividend actually covered by earnings, or is it being paid out of
+    # reserves. Null rather than negative when the name is loss-making:
+    # dividing by a negative eps_ttm would flip the sign into a small
+    # positive-looking number that reads like a *safe*, well-covered payout
+    # when the truth is there is no earnings to cover it from at all.
+    if "dividend_rate" in df.columns and "eps_ttm" in df.columns:
+        df["payout_ratio"] = safe(df["dividend_rate"],
+                                   df["eps_ttm"].where(df["eps_ttm"] > 0)) * 100
+    else:
+        df["payout_ratio"] = np.nan
     # ADRs, from the security type Nasdaq puts in the name. Derived rather
     # than stored so it works on snapshots taken before the field existed —
     # `name` has always been there.
@@ -400,7 +464,21 @@ def load(ts: float | None = None, force: bool = False) -> pd.DataFrame:
     ts = ts or store.latest_snapshot_ts()
     if ts is None:
         return pd.DataFrame()
+
+    # Kicks a background refresh when the corporate calendar is due. Never
+    # blocks: the dividend window is a call per exchange day and would put
+    # twenty seconds of Nasdaq in front of the first screen of the morning.
+    calendars.ensure_all()
+    calendar_version = calendars.dividends.version
+
     if not force and _cache["ts"] == ts and _cache["df"] is not None:
+        # The frame is current but the calendar may have landed since it
+        # was built, on a thread of its own. Patch it into the frame we
+        # already have rather than rebuilding: a rebuild would throw away
+        # the live prices `apply_live` has been writing into it.
+        if _cache.get("calendar") != calendar_version:
+            _cache.update(df=derive(calendars.apply(_cache["df"])),
+                          calendar=calendar_version)
         return _cache["df"]
 
     rows = store.read_snapshot(ts)
@@ -412,9 +490,9 @@ def load(ts: float | None = None, force: bool = False) -> pd.DataFrame:
     for col in numeric:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
-    df = derive(df)
+    df = derive(calendars.apply(df))
     df.attrs["snapshot_ts"] = ts
-    _cache.update(ts=ts, df=df)
+    _cache.update(ts=ts, df=df, calendar=calendar_version)
     return df
 
 

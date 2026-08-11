@@ -101,14 +101,30 @@ setTimeout(() => {
 
   console.log("\nviews");
   for (const v of ["screen", "map", "ticker", "saved", "world", "adr",
-                   "earnings", "news"]) {
+                   "earnings", "news", "dividends", "ipos"]) {
     check("view-" + v + " exists", !!doc.getElementById("view-" + v));
   }
   const tabs = [...doc.querySelectorAll(".tab")].map(t => t.dataset.view);
   check("every tab points at a real view",
         tabs.every(v => v === "help" || doc.getElementById("view-" + v)),
         tabs.join(","));
-  check("ten tabs in the rail", tabs.length === 10, String(tabs.length));
+  // The count is asserted so a view added to the rail without a tab, or a
+  // tab left behind by a removed view, shows up as a failure rather than
+  // as a gap nobody notices. Twelve since the dividend and IPO boards.
+  check("twelve tabs in the rail", tabs.length === 12, String(tabs.length));
+  // F1-F10 are taken, so these two are on Alt. The binding is easy to
+  // lose in a refactor and produces no error when it goes — the tab still
+  // works, so nothing looks broken.
+  check("the two Alt bindings are still wired",
+        /alt\s*=\s*\{\s*d:\s*"dividends",\s*i:\s*"ipos"\s*\}/.test(html),
+        "Alt+D / Alt+I mapping not found");
+  check("the ex-dividend board has its window and cap controls",
+        !!doc.getElementById("divDays") && !!doc.getElementById("divCap")
+        && !!doc.getElementById("divWrap"));
+  check("the IPO board has all four buckets",
+        [...doc.querySelectorAll("#ipoTabs .ipotab")]
+          .map(t => t.dataset.bucket).join(",")
+        === "upcoming,priced,filed,withdrawn");
   check("the live news view is reachable and has a player and a rail",
         !!doc.getElementById("view-livenews") && !!doc.getElementById("lnPlayer")
         && !!doc.getElementById("lnMentions"));

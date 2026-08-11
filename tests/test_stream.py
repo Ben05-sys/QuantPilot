@@ -201,6 +201,64 @@ def main():
                         "at": time.time() - stream.TICK_TTL - 5}
     check("stale ticks are dropped, not served", "OLD" not in ts.snapshot())
 
+    print("\nwhat else the print was carrying")
+    # Yahoo puts the running session totals on every tick and this handler
+    # used to keep four fields out of thirteen. While the stream was up a
+    # row's volume, relative volume and day range therefore stayed frozen
+    # at the last snapshot: the price moved and everything derived from it
+    # did not. Field names are Yahoo's, verified against a live feed.
+    ts._handle({"id": "AMD", "price": 475.75, "change": 5.5,
+                "change_percent": 1.17, "day_volume": "10784039",
+                "day_high": 478.0, "day_low": 469.5, "last_size": "100",
+                "exchange": "NMS", "market_hours": 1,
+                "time": "1785232190000"})
+    got = ts.snapshot()["AMD"]
+    check("the day's volume arrives with the price", got["volume"] == 10784039)
+    check("so does the day's range",
+          got["day_high"] == 478.0 and got["day_low"] == 469.5, got)
+    check("and the size of the print", got["last_size"] == 100)
+    check("and where it traded", got["exchange"] == "NMS")
+
+    print("\nevery print states its own session")
+    for code, name in stream.MARKET_HOURS.items():
+        ts._handle({"id": f"H{code}", "price": 10.0, "market_hours": code,
+                    "time": "1785232190000"})
+        check(f"market_hours {code} is {name}",
+              ts.snapshot()[f"H{code}"]["session"] == name)
+    # Same conversion that quotes int64 will quote this one day.
+    ts._handle({"id": "STRH", "price": 10.0, "market_hours": "2",
+                "time": "1785232190000"})
+    check("a session that arrived as a string still reads",
+          ts.snapshot()["STRH"]["session"] == "POST")
+    ts._handle({"id": "NOH", "price": 10.0, "time": "1785232190000"})
+    check("an absent session is null, not a guess",
+          ts.snapshot()["NOH"]["session"] is None)
+    ts._handle({"id": "ODDH", "price": 10.0, "market_hours": 99,
+                "time": "1785232190000"})
+    check("an unrecognised session is null too",
+          ts.snapshot()["ODDH"]["session"] is None)
+
+    print("\nthe delay is measured, not assumed")
+    fresh = stream.TickStream()
+    check("no ticks means no latency to report, not zero",
+          fresh.latency() is None)
+    check("status says so as well", fresh.status()["latency"] is None)
+    now_ms = time.time() * 1000.0
+    for offset in (1000, 3000, 5000):      # 1s, 3s, 5s behind
+        fresh._handle({"id": f"L{offset}", "price": 1.0,
+                       "time": str(int(now_ms - offset))})
+    check("the median of the sample is what is reported",
+          abs(fresh.latency() - 3.0) < 0.5, fresh.latency())
+    check("status carries it for the badge",
+          abs(fresh.status()["latency"] - 3.0) < 0.5)
+    check("and how many prints it rests on",
+          fresh.status()["samples"] == 3)
+    fresh._handle({"id": "NOTS", "price": 1.0})
+    check("a tick with no venue timestamp is not sampled — it would "
+          "score a flattering zero", fresh.status()["samples"] == 3)
+    check("the window is bounded",
+          fresh._latencies.maxlen == stream.LATENCY_WINDOW)
+
     ts.connected = True
     ts.last_tick_at = 0.0
     check("an open socket that never ticked is not healthy",

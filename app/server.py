@@ -29,6 +29,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 from . import (
     article,
+    calendars,
     clock,
     diffs,
     livenews,
@@ -92,6 +93,30 @@ LIVE_PRICE_LIMIT = 2000
 # meaningfully behind the tape.
 QUOTE_CACHE_TTL = 10.0
 
+# The same cache, read much harder, for the forty rows actually on screen.
+# One TTL used to serve both and it was set for the bulk case: at ten
+# seconds against a five-second poll, every second poll was answered from
+# cache, so the fallback path ran at half the rate it advertised. A
+# re-priced screen still gets QUOTE_CACHE_TTL — it costs ten upstream
+# chunks, not one.
+VISIBLE_QUOTE_TTL = 2.0
+
+# Ticks are collected and flushed to the browser in batches. This is the
+# floor between two flushes, not a fixed sleep: a tick arriving into an
+# idle server goes out immediately, and only under a burst does the next
+# one wait. It replaced a flat sleep(0.7) that added up to 700ms to every
+# price on screen — a quarter of Yahoo's own 2.9s delay, spent for
+# nothing, since a batch of one is the common case outside the open.
+MIN_FLUSH = 0.05
+# And a ceiling on the wait, so a batch whose wakeup was missed still
+# leaves rather than sitting until the next trade.
+MAX_FLUSH_WAIT = 1.0
+
+# How long the measured market state is reused before it is re-measured.
+# Refreshing it costs a Yahoo round trip, which is why it is done on a
+# thread of its own rather than by whoever happens to find it expired.
+LAG_TTL = 5.0
+
 # The header strips. Every open window polls these on a timer; the data
 # moves much more slowly than the polling does.
 STRIP_TTL = 8.0
@@ -132,6 +157,58 @@ def session_label(state: str | None) -> str:
             "CLOSED": "ON"}.get((state or "").upper(), "EXT")
 
 
+# The same question asked of a tick rather than of the venue. A print
+# carries its own session (stream.MARKET_HOURS), which is a fact about
+# that trade instead of an inference from what SPY is doing.
+TICK_SESSION_LABEL = {"PRE": "PRE", "POST": "AH", "EXTENDED": "ON"}
+
+# Fields that describe one print, and so belong to whichever of the tick
+# and the REST quote actually happened later. Everything outside this set
+# is either the tick's alone (the extended-hours fields, which Yahoo's
+# REST stops reporting at the post-market close while prints keep
+# arriving overnight) or the quote's alone (market cap, previous close).
+PRINT_FIELDS = ("price", "change", "change_pct", "volume",
+                "day_high", "day_low", "time", "at")
+
+# Beyond this a cached tick no longer stands in for a quote. The price it
+# carries may still be the last trade — for a name that trades twice an
+# hour it is — but the day's volume counted alongside it has moved on,
+# and serving the pair as one current row is the confident-wrong-answer
+# shape. Well inside TICK_TTL, which governs how long a *price* survives.
+TICK_SATISFIES_FOR = 45.0
+
+
+def _stale_tick(tick: dict | None) -> bool:
+    """Too old to spare the symbol a real quote."""
+    if not tick:
+        return True
+    return (time.time() - tick.get("at", 0.0)) > TICK_SATISFIES_FOR
+
+
+def _merge_tick_over_quote(tick: dict | None, shaped: dict | None,
+                           quote: dict) -> dict:
+    """One REST quote with the streamed print laid over it.
+
+    The tick normally wins — it arrives seconds behind the tape where a
+    cached quote can be several seconds old. But it is only *normally*
+    newer, and the exception is the one that shows: a thin name whose last
+    trade was eleven minutes ago has a tick sitting in the cache that
+    would otherwise overwrite a quote fetched a moment ago, so the row
+    reports a quarter-hour-old price while the header says LAG 2s. When
+    the venue timestamps say the quote is the later print, the tick keeps
+    only what the quote cannot supply.
+    """
+    overlay = {k: v for k, v in (shaped or {}).items() if v is not None}
+    traded_at, quoted_at = (tick or {}).get("time"), quote.get("quote_time")
+    if (traded_at is not None and quoted_at is not None
+            and traded_at < quoted_at):
+        for key in PRINT_FIELDS:
+            overlay.pop(key, None)
+    merged = dict(quote)
+    merged.update(overlay)
+    return merged
+
+
 class AppState:
     """Everything shared between request threads."""
 
@@ -152,6 +229,10 @@ class AppState:
         self.stream = stream.TickStream(on_tick=self._on_tick)
         self._pending_ticks: dict[str, dict] = {}
         self._ticks_lock = threading.Lock()
+        # Raised by the socket thread when a tick lands, so the flush
+        # thread can sleep until there is something to send instead of
+        # waking on a timer and usually finding nothing.
+        self._tick_event = threading.Event()
         self._quote_cache: dict[str, tuple[float, dict]] = {}
         self._quote_lock = threading.Lock()
         self._strips: dict[str, tuple[float, dict]] = {}
@@ -176,9 +257,10 @@ class AppState:
 
     # ---- short-lived quote cache ----
 
-    def cached_quotes(self, symbols: list[str]) -> tuple[dict, list[str]]:
+    def cached_quotes(self, symbols: list[str],
+                      ttl: float = QUOTE_CACHE_TTL) -> tuple[dict, list[str]]:
         """(what we already have that is fresh, what still needs fetching)."""
-        cutoff = time.time() - QUOTE_CACHE_TTL
+        cutoff = time.time() - ttl
         have, need = {}, []
         with self._quote_lock:
             for s in symbols:
@@ -206,6 +288,7 @@ class AppState:
     def _on_tick(self, tick: dict) -> None:
         with self._ticks_lock:
             self._pending_ticks[tick["symbol"]] = tick
+        self._tick_event.set()
 
     def shape_tick(self, tick: dict, state: str | None = None) -> dict:
         """A websocket tick, as the browser is allowed to see it.
@@ -222,35 +305,61 @@ class AppState:
         poll and the SSE broadcast. They used to shape ticks separately,
         and only the poll had this rule, so a closed market still flashed
         on the streaming path.
+
+        Which session a print belongs to is read from the print itself.
+        The venue's `marketState` is one global answer, sampled from SPY,
+        and applying it to every symbol gets the edges wrong in both
+        directions: a regular-session trade that prints late is not an
+        extended one, and an ATS print does not become a new LAST because
+        the clock still says REGULAR. Only when a tick arrives without a
+        session of its own does the global state stand in for it.
         """
-        if state is None:
-            _, state = self.lag()
-        if (state or "").upper() == "REGULAR":
+        session = tick.get("session")
+        if session is None:
+            if state is None:
+                _, state = self.lag()
+            regular = (state or "").upper() == "REGULAR"
+            label = session_label(state)
+        else:
+            regular = session == "REGULAR"
+            label = TICK_SESSION_LABEL.get(session, "EXT")
+        if regular:
             return dict(tick)
         return {
             "ext_price": tick.get("price"),
             "ext_change_pct": tick.get("change_pct"),
-            "ext_label": session_label(state),
+            "ext_label": label,
             "market_state": state,
+            # Kept out of the extended payload deliberately: `day_volume`
+            # and the day's range on an after-hours print are still the
+            # regular session's totals, and letting them through would
+            # overwrite good snapshot values with the same numbers hours
+            # later while implying they were current.
         }
 
     def drain_ticks(self) -> dict:
         """Take everything the socket has collected, shaped for the browser.
 
         Split out of the flush loop so the session rule can be tested
-        without a websocket and a 0.7-second wait. Shaped once for the
-        whole batch: `lag()` is cached, and the session cannot turn over
-        inside one flush.
+        without a websocket and a wait.
+
+        The venue's market state is resolved lazily and only if some tick
+        in the batch arrived without a session of its own. This used to be
+        read once up front, which looked like the cheap way round until
+        the profile showed why the flush occasionally stalled a quarter of
+        a second: `lag()` refreshes itself with a blocking Yahoo request,
+        so every fifth second one batch of prices waited on a round trip
+        before it could be sent. Nothing in the batch needed the answer.
         """
         with self._ticks_lock:
             batch, self._pending_ticks = self._pending_ticks, {}
         if not batch:
             return {}
-        _, state = self.lag()
-        return {symbol: self.shape_tick(tick, state)
+        return {symbol: self.shape_tick(tick)
                 for symbol, tick in batch.items()}
 
-    def live_quotes(self, symbols: list[str]) -> dict:
+    def live_quotes(self, symbols: list[str],
+                    ttl: float = QUOTE_CACHE_TTL) -> dict:
         """Fresh quotes for these symbols.
 
         Three sources, cheapest first: ticks already arriving on the
@@ -262,22 +371,25 @@ class AppState:
         _, state = self.lag()
         regular = (state or "").upper() == "REGULAR"
 
-        ticks = self.stream.snapshot(symbols)
+        raw = self.stream.snapshot(symbols)
         out = {symbol: self.shape_tick(tick, state)
-               for symbol, tick in ticks.items()}
+               for symbol, tick in raw.items()}
         # Every symbol still needs its regular-session price, so outside
-        # regular hours nothing is satisfied by a tick alone.
+        # regular hours nothing is satisfied by a tick alone. Nor is a
+        # tick that has simply been sitting in the cache: TICK_TTL keeps
+        # prints for fifteen minutes because for an illiquid name the last
+        # trade really is the price, but everything counted alongside it —
+        # the day's volume above all — has moved on since.
         remaining = [s for s in symbols
-                     if s not in out or not regular]
-        cached, need = self.cached_quotes(remaining)
+                     if s not in out or not regular
+                     or _stale_tick(raw.get(s))]
+        cached, need = self.cached_quotes(remaining, ttl)
         for symbol, quote in cached.items():
-            out.setdefault(symbol, {})
-            merged = dict(quote)
-            merged.update({k: v for k, v in out[symbol].items()
-                           if v is not None})
-            out[symbol] = merged
+            out[symbol] = _merge_tick_over_quote(raw.get(symbol),
+                                                 out.get(symbol), quote)
 
         fetched = {}
+        now = time.time()
         for q in (yahoo.provider.quotes(need) if need else []):
             if not q.symbol:
                 continue
@@ -292,18 +404,18 @@ class AppState:
                 "ext_label": label, "ext_price": ext_price,
                 "ext_change_pct": ext_pct,
                 "lag_seconds": q.lag_seconds, "market_state": q.market_state,
+                # When the venue says this print happened, not when we
+                # heard about it. The merge below needs a timestamp it can
+                # compare against a tick's, and the browser gets a real
+                # per-row age out of it rather than SPY's.
+                "quote_time": (now - q.lag_seconds
+                               if q.lag_seconds is not None else None),
             }
         if fetched:
             self.store_quotes(fetched)
             for symbol, quote in fetched.items():
-                # A tick already collected for this symbol outranks the
-                # REST payload for the extended fields — it is seconds old
-                # where Yahoo's stops at the post-market close.
-                overlay = {k: v for k, v in (out.get(symbol) or {}).items()
-                           if v is not None}
-                merged = dict(quote)
-                merged.update(overlay)
-                out[symbol] = merged
+                out[symbol] = _merge_tick_over_quote(raw.get(symbol),
+                                                     out.get(symbol), quote)
         return out
 
     def requote(self, symbols: list[str]) -> dict:
@@ -355,13 +467,42 @@ class AppState:
 
         def flush():
             while True:
-                time.sleep(0.7)
+                self._tick_event.wait(MAX_FLUSH_WAIT)
+                # Cleared before draining, never after: a tick landing in
+                # the gap between the two then re-raises the event and is
+                # picked up next time round. Clearing afterwards would
+                # drop it instead, and it would sit in the buffer until
+                # the symbol happened to trade again.
+                self._tick_event.clear()
                 batch = self.drain_ticks()
                 if batch:
                     self.broadcast("ticks", {"quotes": batch,
                                              "as_of": time.time()})
+                    # The coalescing window. Everything that trades during
+                    # it rides out on one flush.
+                    time.sleep(MIN_FLUSH)
+
+        def warm_lag():
+            """Keep the market-state cache warm, on its own thread.
+
+            `lag()` refreshes itself with a blocking Yahoo request, and
+            whichever thread finds the cache expired pays for it. Left on
+            the flush loop that was one batch of prices every five seconds
+            arriving a quarter of a second late — measured, and the reason
+            this thread exists. Here nothing waits on it: the flush loop
+            and the request handlers only ever read a cache someone else
+            filled. It runs only while the stream does, so a terminal
+            sitting idle is not polling anything.
+            """
+            while True:
+                try:
+                    self.lag()
+                except Exception:  # noqa: BLE001 — the header is not
+                    pass           # worth taking the process down for
+                time.sleep(LAG_TTL)
 
         threading.Thread(target=flush, daemon=True, name="pm-ticks").start()
+        threading.Thread(target=warm_lag, daemon=True, name="pm-lag").start()
 
     # ---- SSE fan-out ----
 
@@ -396,7 +537,7 @@ class AppState:
         answer is CLOSED.
         """
         now = time.time()
-        if now - self._lag_cache["at"] < 5:
+        if now - self._lag_cache["at"] < LAG_TTL:
             return self._lag_cache["lag"], self._lag_cache["state"]
         lag = state = None
         try:
@@ -605,6 +746,10 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(diffs.all_screens())
             elif path == "/api/earnings":
                 self._earnings(params)
+            elif path == "/api/dividends":
+                self._dividends(params)
+            elif path == "/api/ipos":
+                self._ipos(params)
             elif path == "/api/screens":
                 self._json({"screens": store.list_screens()})
             elif path.startswith("/api/ticker/"):
@@ -769,8 +914,9 @@ class Handler(BaseHTTPRequestHandler):
             return df, "snapshot", count
         return screen.apply_quotes(candidates, quotes), "live", count
 
-    def _live_quotes(self, symbols: list[str]) -> dict:
-        return self.state.live_quotes(symbols)
+    def _live_quotes(self, symbols: list[str],
+                     ttl: float = QUOTE_CACHE_TTL) -> dict:
+        return self.state.live_quotes(symbols, ttl)
 
     def _quotes(self, params: dict):
         """Quotes for the rows currently on screen.
@@ -785,7 +931,10 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"quotes": {}, "as_of": time.time()})
             return
         self.state.stream.subscribe(symbols)
-        self._json({"quotes": self._live_quotes(symbols),
+        # The tight TTL: this is at most a couple of hundred rows and it
+        # is the path the terminal falls back to when the stream is down,
+        # which is precisely when it must not also be serving cache.
+        self._json({"quotes": self._live_quotes(symbols, VISIBLE_QUOTE_TTL),
                     "as_of": time.time(),
                     "stream": self.state.stream.status()})
 
@@ -972,6 +1121,88 @@ class Handler(BaseHTTPRequestHandler):
                for key, items in sorted(buckets.items())]
         self._json({"days": out, "total": total, "window": days,
                     "as_of": time.time()})
+
+    def _dividends(self, params: dict):
+        """What goes ex, grouped by exchange day.
+
+        Read off the screener frame rather than straight from Nasdaq's
+        calendar, which is the whole point of joining the two: the
+        calendar knows four dates and a company name, and the frame knows
+        the price the drop will come out of, the yield, and whether this
+        year's earnings actually cover the payment.
+
+        Grouped in New York time for the same reason earnings are — an
+        ex-date is an exchange day, and from India bucketing by local date
+        scatters one across two.
+        """
+        df = self._frame()
+        if df is None:
+            self._json({"days": [], "empty": True})
+            return
+        days = max(1, min(int(self._one(params, "days", "14") or 14), 42))
+        min_cap = float(self._one(params, "min_cap", "0") or 0)
+
+        # Includes yesterday: a stock that went ex this morning is still
+        # the most relevant row on the board to anyone holding it.
+        expr = f"-1 < exdiv < {days}"
+        if min_cap:
+            expr += f" and mcap > {min_cap}"
+        hits, total = screen.run(df, expr, sort="market_cap", descending=True,
+                                 limit=1500)
+        rows = screen.to_records(hits, [
+            "symbol", "name", "sector", "price", "change_pct", "market_cap",
+            "volume", "dividend_yield", "payout_ratio",
+            "ex_div_ts", "div_record_ts", "div_pay_ts", "div_declared_ts",
+            "div_amount", "div_annual_amount", "ex_div_days",
+            "div_drop_pct", "div_yield_upcoming"])
+
+        buckets: dict[str, list] = {}
+        for row in rows:
+            ts = row.get("ex_div_ts")
+            if not ts:
+                continue
+            key = datetime.fromtimestamp(ts, clock.EASTERN).strftime("%Y-%m-%d")
+            buckets.setdefault(key, []).append(row)
+        out = [{"date": key,
+                "weekday": datetime.strptime(key, "%Y-%m-%d").strftime("%a"),
+                "count": len(items),
+                "market_cap": sum(i.get("market_cap") or 0 for i in items),
+                # What a day of ex-dividends is worth in cash, across the
+                # names on it. The one figure that says whether a date
+                # matters to the tape or is a handful of small payers.
+                "total_drop": sum((i.get("div_drop_pct") or 0)
+                                  for i in items) / max(len(items), 1),
+                "rows": items}
+               for key, items in sorted(buckets.items())]
+        self._json({"days": out, "total": total, "window": days,
+                    "calendar": calendars.status()["dividends"],
+                    "as_of": time.time()})
+
+    def _ipos(self, params: dict):
+        """The IPO board: upcoming, priced, filed, withdrawn.
+
+        Kept entirely separate from the universe, unlike dividends. A
+        company that has not listed yet has no price, no volume and no
+        market cap, so it cannot be a screener row without inventing three
+        — and the screener's contract is that every row is a tradeable
+        line. What it does carry is the deal: the range it filed, how many
+        shares, and what that comes to.
+        """
+        board = calendars.ipo_board()
+        which = (self._one(params, "bucket", "") or "").strip().lower()
+        if which and which in board:
+            board = {which: board[which], "as_of": board["as_of"],
+                     "stale": board["stale"], "error": board["error"]}
+        board["calendar"] = calendars.status()["ipos"]
+        # Which of these already trade, so the UI can link them through to
+        # a chart rather than offering a dead click on a company that has
+        # not listed.
+        df = self._frame()
+        listed = set(df["symbol"]) if df is not None and not df.empty else set()
+        for key in ("upcoming", "priced", "filed", "withdrawn"):
+            for row in board.get(key) or []:
+                row["listed"] = row.get("symbol") in listed
+        self._json(board)
 
     def _livenews(self, params: dict):
         """Which finance networks are on air, and the tickers the current

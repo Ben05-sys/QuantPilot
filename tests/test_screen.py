@@ -451,6 +451,20 @@ def main():
           "pct_52w_range" in screen.LIVE_COLUMNS
           and "pct_52w_range" not in screen.STATIC_SAFE)
 
+    print("\n52-week range width")
+    check("DEAR's range is 150% of its low: (250-100)/100",
+          abs(row["DEAR"]["range_52w_width"] - 150.0) < 1e-9,
+          row["DEAR"]["range_52w_width"])
+    check("NOTRADE's narrower range reads smaller even though its position "
+          "in the range is similar to CHEAP's",
+          row["NOTRADE"]["range_52w_width"] < row["CHEAP"]["range_52w_width"],
+          (row["NOTRADE"]["range_52w_width"], row["CHEAP"]["range_52w_width"]))
+    check("width52 resolves", screen.resolve("width52") == "range_52w_width")
+    check("range_52w_width depends only on the two slow endpoints, so it "
+          "narrows safely stale",
+          "range_52w_width" in screen.STATIC_SAFE
+          and "range_52w_width" not in screen.LIVE_COLUMNS)
+
     print("\ngap percent")
     check("gapped up 5%", abs(row["CHEAP"]["gap_pct"] - 5.0) < 1e-9,
           row["CHEAP"]["gap_pct"])
@@ -536,8 +550,10 @@ def main():
           abs(trrow["GAPPED"]["atr_pct"] - 22 / 82 * 100) < 1e-9,
           trrow["GAPPED"]["atr_pct"])
     check("atr resolves", screen.resolve("atr") == "atr_pct")
-    check("atr_pct needs today's range and price, so it isn't prefiltered on a stale one",
-          "atr_pct" in screen.LIVE_COLUMNS and "atr_pct" not in screen.STATIC_SAFE)
+    check("atr_pct needs today's range and price, so it isn't prefiltered "
+          "on a stale one",
+          "atr_pct" in screen.LIVE_COLUMNS
+          and "atr_pct" not in screen.STATIC_SAFE)
 
     print("\nsma spread")
     ss = derive(pd.DataFrame({
@@ -556,8 +572,10 @@ def main():
           abs(ssrow["BELOW"]["sma_spread"] - (-5.0)) < 1e-9,
           ssrow["BELOW"]["sma_spread"])
     check("smaspread resolves", screen.resolve("smaspread") == "sma_spread")
-    check("sma_spread depends only on two slow-moving averages, so it narrows safely stale",
-          "sma_spread" in screen.STATIC_SAFE and "sma_spread" not in screen.LIVE_COLUMNS)
+    check("sma_spread depends only on two slow-moving averages, so it "
+          "narrows safely stale",
+          "sma_spread" in screen.STATIC_SAFE
+          and "sma_spread" not in screen.LIVE_COLUMNS)
 
     print("\nearnings yield")
     ey = derive(pd.DataFrame({
@@ -600,7 +618,50 @@ def main():
           egrow["RECOVERING"]["eps_growth"])
     check("epsgrowth resolves", screen.resolve("epsgrowth") == "eps_growth")
     check("eps growth tracks two estimates, not price, so it narrows safely stale",
-          "eps_growth" in screen.STATIC_SAFE and "eps_growth" not in screen.LIVE_COLUMNS)
+          "eps_growth" in screen.STATIC_SAFE
+          and "eps_growth" not in screen.LIVE_COLUMNS)
+
+    print("\npeg")
+    pg = derive(pd.DataFrame({
+        "symbol": ["GROWER", "DECLINER"], "name": ["G", "D"], "sector": ["T"] * 2,
+        "price": [50.0, 50.0], "change_pct": [0.0] * 2,
+        "volume": [1e6] * 2, "avg_volume_3m": [1e6] * 2, "market_cap": [1e9] * 2,
+        "week52_high": [60.0] * 2, "week52_low": [40.0] * 2,
+        "sma50": [50.0] * 2, "sma200": [50.0] * 2,
+        "pe": [20.0, 15.0], "eps_ttm": [2.0, 2.0], "eps_forward": [2.5, 1.5],
+        "earnings_ts": [np.nan] * 2,
+    }))
+    pgrow = dict(zip(pg["symbol"], pg.to_dict("records"), strict=True))
+    check("growing name: peg is P/E over the growth rate eps_growth supplies",
+          abs(pgrow["GROWER"]["peg"] - 0.8) < 1e-9, pgrow["GROWER"]["peg"])
+    check("shrinking estimates: peg stays null rather than flip sign into "
+          "a fake bargain",
+          np.isnan(pgrow["DECLINER"]["peg"]), pgrow["DECLINER"]["peg"])
+    check("peg tracks the same slow-moving inputs as pe and eps_growth, so "
+          "it narrows safely stale",
+          "peg" in screen.STATIC_SAFE and "peg" not in screen.LIVE_COLUMNS)
+
+    print("\npayout ratio")
+    pr = derive(pd.DataFrame({
+        "symbol": ["COVERED", "LOSER"], "name": ["C", "L"], "sector": ["T"] * 2,
+        "price": [50.0, 50.0], "change_pct": [0.0] * 2,
+        "volume": [1e6] * 2, "avg_volume_3m": [1e6] * 2, "market_cap": [1e9] * 2,
+        "week52_high": [60.0] * 2, "week52_low": [40.0] * 2,
+        "sma50": [50.0] * 2, "sma200": [50.0] * 2,
+        "eps_ttm": [4.0, -1.0], "dividend_rate": [1.0, 1.0],
+        "earnings_ts": [np.nan] * 2,
+    }))
+    prrow = dict(zip(pr["symbol"], pr.to_dict("records"), strict=True))
+    check("profitable name: payout is dividend over trailing eps, as a percent",
+          abs(prrow["COVERED"]["payout_ratio"] - 25.0) < 1e-9,
+          prrow["COVERED"]["payout_ratio"])
+    check("loss-making name: payout stays null rather than a fake positive number",
+          np.isnan(prrow["LOSER"]["payout_ratio"]), prrow["LOSER"]["payout_ratio"])
+    check("payout resolves", screen.resolve("payout") == "payout_ratio")
+    check("payout ratio tracks dividend and trailing eps, not price, so it "
+          "narrows safely stale",
+          "payout_ratio" in screen.STATIC_SAFE
+          and "payout_ratio" not in screen.LIVE_COLUMNS)
 
     # Today's dollar volume only rises, so prefiltering on a stale one would
     # drop the names that have since crossed the line. The average is a

@@ -28,7 +28,7 @@ jobs:
     name: ruff
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
@@ -47,7 +47,7 @@ jobs:
         python: ['3.11', '3.13']
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v5
         with:
@@ -69,6 +69,11 @@ jobs:
         run: python tests/test_diffs.py
       - name: options
         run: python tests/test_options.py
+      # The dividend and IPO calendars, against pasted Nasdaq payloads —
+      # the dates in them are fixed, so this asserts the same thing on a
+      # runner in any timezone.
+      - name: calendars
+        run: python tests/test_calendars.py
       # Also offline: the channel probe runs against a stubbed fetch, which
       # is the only way to assert on "who is on air" without the answer
       # changing under the test.
@@ -87,7 +92,7 @@ jobs:
       - name: stream
         run: python tests/test_stream.py
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '20'
 

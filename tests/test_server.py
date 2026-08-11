@@ -26,7 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 TMP = Path(tempfile.mkdtemp(prefix="quantpilot-srv-"))
 os.environ["QUANTPILOT_HOME"] = str(TMP)
 
-from app import screen, server, store, universe  # noqa: E402
+from app import config, screen, server, store, stream, universe  # noqa: E402
 
 PASS = FAIL = SKIP = 0
 
@@ -395,6 +395,89 @@ def main():
     check("as does subscribing during the session",
           (body.get("quotes") or {}).get("NVDA", {}).get("price") == 191.5,
           body.get("quotes"))
+
+    print("\na print states its own session")
+    # The rule above, asked of the print rather than of SPY. `marketState`
+    # is one global answer sampled from one symbol, and it is wrong at both
+    # edges: a regular-session trade reported after the bell is still a
+    # regular-session trade, and an ATS print does not earn the right to
+    # overwrite LAST because the clock happens to say REGULAR.
+    late = dict(tick, session="REGULAR")
+    shaped = state.shape_tick(late, "CLOSED")
+    check("a regular print stays a last price after the bell",
+          shaped.get("price") == 191.5, shaped)
+
+    ats = dict(tick, session="EXTENDED")
+    shaped = state.shape_tick(ats, "REGULAR")
+    check("an overnight print never becomes LAST mid-session",
+          "price" not in shaped, shaped)
+    check("it is labelled by its own session, not the venue's",
+          shaped.get("ext_label") == "ON"
+          and shaped.get("ext_price") == 191.5, shaped)
+    for session, label in (("PRE", "PRE"), ("POST", "AH")):
+        shaped = state.shape_tick(dict(tick, session=session), "REGULAR")
+        check(f"a {session} print is labelled {label}",
+              shaped.get("ext_label") == label, shaped)
+    check("a tick with no session of its own falls back to the venue's",
+          state.shape_tick(tick, "PREPRE").get("ext_label") == "ON")
+    check("and the session totals stay out of an extended payload",
+          "volume" not in state.shape_tick(
+              dict(tick, session="POST", volume=5e6), "REGULAR"))
+
+    print("\nthe newer print wins, whichever it is")
+    # A tick normally outranks the REST quote. But TICK_TTL keeps prints
+    # for fifteen minutes, so for a name that trades twice an hour the
+    # cached tick was overwriting a quote fetched a moment ago — the row
+    # reporting a quarter-hour-old price under a header saying LAG 2s.
+    quote = {"price": 100.0, "change_pct": 1.0, "volume": 9e6,
+             "market_cap": 5e11, "quote_time": 1000.0,
+             "ext_price": None, "ext_change_pct": None}
+    fresh = {"price": 101.0, "change_pct": 2.0, "volume": 9.5e6,
+             "time": 1005.0, "at": time.time()}
+    merged = server._merge_tick_over_quote(fresh, dict(fresh), quote)
+    check("a newer tick overwrites the quote",
+          merged["price"] == 101.0 and merged["volume"] == 9.5e6, merged)
+    check("and keeps what only the quote has",
+          merged["market_cap"] == 5e11, merged)
+
+    old = {"price": 99.0, "change_pct": -1.0, "volume": 8e6,
+           "time": 200.0, "at": time.time()}
+    merged = server._merge_tick_over_quote(old, dict(old), quote)
+    check("an older tick does not overwrite the quote's price",
+          merged["price"] == 100.0, merged)
+    check("nor its volume — the count moved on with the price",
+          merged["volume"] == 9e6, merged)
+
+    # The exception, and the reason the overlay exists at all: Yahoo's REST
+    # extended fields stop at the post-market close while prints keep
+    # arriving from the overnight venues all night.
+    ext = {"ext_price": 97.5, "ext_change_pct": -2.5, "ext_label": "ON"}
+    merged = server._merge_tick_over_quote(dict(old, **ext),
+                                        dict(ext), quote)
+    check("extended fields come from the tick even when it is older",
+          merged["ext_price"] == 97.5, merged)
+
+    check("a tick with no timestamp cannot be ranked, so it wins as before",
+          server._merge_tick_over_quote({"price": 1.0}, {"price": 1.0},
+                                     quote)["price"] == 1.0)
+
+    print("\nlatency the terminal adds itself")
+    check("a tick is flushed on arrival, not on a fixed sleep",
+          server.MIN_FLUSH <= 0.1, server.MIN_FLUSH)
+    check("with a ceiling so a missed wakeup still sends",
+          0 < server.MAX_FLUSH_WAIT <= 2.0, server.MAX_FLUSH_WAIT)
+    check("the visible-row cache is shorter than the poll that reads it",
+          server.VISIBLE_QUOTE_TTL < config.DEFAULTS["tick_seconds"],
+          (server.VISIBLE_QUOTE_TTL, config.DEFAULTS["tick_seconds"]))
+    check("bulk screening keeps the longer cache — it costs ten chunks",
+          server.QUOTE_CACHE_TTL > server.VISIBLE_QUOTE_TTL)
+    check("a cached tick stops standing in for a quote well inside TICK_TTL",
+          server.TICK_SATISFIES_FOR < stream.TICK_TTL, server.TICK_SATISFIES_FOR)
+    check("a tick older than that no longer satisfies a symbol",
+          server._stale_tick({"at": time.time() - server.TICK_SATISFIES_FOR - 1}))
+    check("a fresh one does",
+          not server._stale_tick({"at": time.time()}))
+    check("and a missing tick never does", server._stale_tick(None))
 
     print("\nrefresh guard")
     state.refresh_lock.acquire()
