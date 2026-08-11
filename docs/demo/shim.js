@@ -265,7 +265,11 @@
     };
   }
 
-  const subscribed = new Set();
+  // Seeded from the recording rather than filled as prints arrive, so the
+  // badge reads STREAM 99 on load instead of STREAM 0 for the first few
+  // seconds. These are the symbols the tape actually carries, which is
+  // the same claim the live badge makes about its subscription.
+  const subscribed = new Set((D.tape || []).map(e => e.s));
 
   window.fetch = function (url, opts) {
     const u = new URL(url, location.href);
