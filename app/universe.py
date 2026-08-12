@@ -281,6 +281,18 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
         df["gap_pct"] = safe(df["open"] - df["prev_close"], df["prev_close"]) * 100
     else:
         df["gap_pct"] = np.nan
+    # Whether the gap has since been retraded: the low came back through
+    # yesterday's close on a gap up, or the high came back through it on a
+    # gap down. Null, not False, when there was no gap to fill.
+    if {"open", "prev_close", "day_high", "day_low"} <= set(df.columns):
+        gap_up = df["open"] > df["prev_close"]
+        gap_down = df["open"] < df["prev_close"]
+        filled = pd.Series([None] * len(df), index=df.index, dtype=object)
+        filled.loc[gap_up] = df["day_low"] <= df["prev_close"]
+        filled.loc[gap_down] = df["day_high"] >= df["prev_close"]
+        df["gap_filled"] = filled
+    else:
+        df["gap_filled"] = np.nan
     # The move since *today's open*, not yesterday's close. `chg` conflates
     # the overnight gap with what has happened during the session; a name
     # can gap up 5% and then sell off all day, which is a very different

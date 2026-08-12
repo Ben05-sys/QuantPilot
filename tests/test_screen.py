@@ -485,6 +485,27 @@ def main():
               "sma50": [1.0], "sma200": [1.0], "earnings_ts": [np.nan],
           }))["gap_pct"].isna().all())
 
+    print("\ngap filled")
+    check("gap up retraded through the prior close: filled",
+          row["CHEAP"]["gap_filled"] is True, row["CHEAP"]["gap_filled"])
+    check("gap down retraded back up through the prior close: filled",
+          row["DEAR"]["gap_filled"] is True, row["DEAR"]["gap_filled"])
+    check("no gap at all reads null, not False",
+          row["FLAT"]["gap_filled"] is None, row["FLAT"]["gap_filled"])
+    check("gap up that never came back down reads not filled",
+          derive(pd.DataFrame({
+              "symbol": ["X"], "name": ["X"], "sector": ["T"], "price": [1.0],
+              "change_pct": [0.0], "volume": [1.0], "avg_volume_3m": [1.0],
+              "market_cap": [1.0], "week52_high": [1.0], "week52_low": [1.0],
+              "sma50": [1.0], "sma200": [1.0], "earnings_ts": [np.nan],
+              "open": [11.0], "prev_close": [10.0],
+              "day_low": [10.5], "day_high": [11.5],
+          }))["gap_filled"].iloc[0] is False)
+    check("gapfilled resolves", screen.resolve("gapfilled") == "gap_filled")
+    check("gap_filled needs today's high/low, so it isn't prefiltered stale",
+          "gap_filled" in screen.LIVE_COLUMNS
+          and "gap_filled" not in screen.STATIC_SAFE)
+
     print("\nintraday percent")
     check("gapped up but sold off since the open reads negative",
           abs(row["CHEAP"]["intraday_pct"] - (-100 / 21)) < 1e-9,
