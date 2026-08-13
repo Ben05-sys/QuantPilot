@@ -262,6 +262,14 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
     # at 09:45 and says nothing about whether a name is normally liquid.
     df["dollar_volume"] = df["price"] * df["volume"]
     df["avg_dollar_volume"] = df["price"] * df["avg_volume_3m"]
+    # Turnover: today's volume as a percent of the whole float. A different
+    # question from rel_volume's "busier than usual for this name" — a
+    # thinly floated stock can turn over its entire share count on a day
+    # that is not even elevated against its own average.
+    if "shares_outstanding" in df.columns:
+        df["turnover_pct"] = safe(df["volume"], df["shares_outstanding"]) * 100
+    else:
+        df["turnover_pct"] = np.nan
     # Where the last price sits in the day's range, 0 at the low and 100 at
     # the high. A stock closing at 95 is a different tape from one closing
     # at 15 on the same percentage change. NaN, not 50, when the range has

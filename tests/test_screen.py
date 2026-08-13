@@ -684,6 +684,28 @@ def main():
           "payout_ratio" in screen.STATIC_SAFE
           and "payout_ratio" not in screen.LIVE_COLUMNS)
 
+    print("\nturnover")
+    tv = derive(pd.DataFrame({
+        "symbol": ["ACTIVE", "NOFLOAT"], "name": ["A", "N"], "sector": ["T"] * 2,
+        "price": [50.0, 50.0], "change_pct": [0.0] * 2,
+        "volume": [2e6, 1e6], "avg_volume_3m": [1e6] * 2, "market_cap": [1e9] * 2,
+        "week52_high": [60.0] * 2, "week52_low": [40.0] * 2,
+        "sma50": [50.0] * 2, "sma200": [50.0] * 2,
+        "shares_outstanding": [40e6, 0.0],
+        "earnings_ts": [np.nan] * 2,
+    }))
+    tvrow = dict(zip(tv["symbol"], tv.to_dict("records"), strict=True))
+    check("turnover is today's volume over shares outstanding, as a percent",
+          abs(tvrow["ACTIVE"]["turnover_pct"] - 5.0) < 1e-9,
+          tvrow["ACTIVE"]["turnover_pct"])
+    check("zero shares outstanding stays null rather than a division blow-up",
+          np.isnan(tvrow["NOFLOAT"]["turnover_pct"]), tvrow["NOFLOAT"]["turnover_pct"])
+    check("turnoverpct resolves", screen.resolve("turnoverpct") == "turnover_pct")
+    check("turnover tracks today's volume, which only rises, so it needs "
+          "live re-pricing before it narrows a screen",
+          "turnover_pct" in screen.LIVE_COLUMNS
+          and "turnover_pct" not in screen.STATIC_SAFE)
+
     # Today's dollar volume only rises, so prefiltering on a stale one would
     # drop the names that have since crossed the line. The average is a
     # standing fact about the name and narrows safely.

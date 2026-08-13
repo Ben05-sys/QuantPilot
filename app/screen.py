@@ -38,7 +38,8 @@ DERIVED = ["rel_volume", "rel_volume_raw", "rel_volume_10d", "session_fraction",
            "rs_sector", "sector_change_pct",
            "dollar_volume", "avg_dollar_volume", "day_range_pct", "gap_pct",
            "gap_filled", "true_range", "atr_pct", "sma_spread",
-           "intraday_pct", "earnings_yield", "eps_growth", "payout_ratio"]
+           "intraday_pct", "earnings_yield", "eps_growth", "payout_ratio",
+           "turnover_pct"]
 
 # Joined onto the frame from the corporate calendar (app/calendars.py)
 # rather than read from the snapshot, plus what derive() computes from
@@ -75,7 +76,7 @@ LIVE_COLUMNS = {
     # Built from today's open, which a stale snapshot may not have yet.
     "gap_pct", "gap_filled", "intraday_pct",
     # Built from today's volume, which only rises as the session runs.
-    "rel_volume_10d",
+    "rel_volume_10d", "turnover_pct",
     # Built from today's high/low, which only widen as the session runs.
     "true_range", "atr_pct",
     # The dividend against today's price. The payment is fixed weeks in
@@ -177,6 +178,7 @@ ALIASES = {
     "dollarvolume": "dollar_volume", "turnover": "dollar_volume",
     "avgdvol": "avg_dollar_volume", "avgdollarvol": "avg_dollar_volume",
     "liquidity": "avg_dollar_volume",
+    "turnoverpct": "turnover_pct", "floatturnover": "turnover_pct",
     "dayrange": "day_range_pct", "rangepos": "day_range_pct",
     "inrange": "day_range_pct", "gap": "gap_pct",
     "intraday": "intraday_pct", "sinceopen": "intraday_pct",
