@@ -39,7 +39,7 @@ DERIVED = ["rel_volume", "rel_volume_raw", "rel_volume_10d", "session_fraction",
            "dollar_volume", "avg_dollar_volume", "day_range_pct", "gap_pct",
            "gap_filled", "true_range", "atr_pct", "sma_spread",
            "intraday_pct", "earnings_yield", "eps_growth", "payout_ratio",
-           "turnover_pct"]
+           "turnover_pct", "volume_trend"]
 
 # Joined onto the frame from the corporate calendar (app/calendars.py)
 # rather than read from the snapshot, plus what derive() computes from
@@ -128,6 +128,9 @@ STATIC_SAFE = {
     # `volume` is — it only rises, so a stale value drops the very names
     # that have since crossed the threshold.
     "avg_dollar_volume",
+    # Two rolling averages, same drift tolerance as `sma_spread`. Today's
+    # raw `volume` is deliberately absent, same reasoning as the line above.
+    "volume_trend",
     # The corporate calendar. A declared dividend's four dates and its
     # amount are fixed the moment it is announced and do not move again,
     # so they are the most static fields here — safe to narrow on before
@@ -179,6 +182,7 @@ ALIASES = {
     "avgdvol": "avg_dollar_volume", "avgdollarvol": "avg_dollar_volume",
     "liquidity": "avg_dollar_volume",
     "turnoverpct": "turnover_pct", "floatturnover": "turnover_pct",
+    "voltrend": "volume_trend", "volumetrend": "volume_trend",
     "dayrange": "day_range_pct", "rangepos": "day_range_pct",
     "inrange": "day_range_pct", "gap": "gap_pct",
     "intraday": "intraday_pct", "sinceopen": "intraday_pct",

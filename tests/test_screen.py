@@ -706,6 +706,29 @@ def main():
           "turnover_pct" in screen.LIVE_COLUMNS
           and "turnover_pct" not in screen.STATIC_SAFE)
 
+    print("\nvolume trend")
+    vt = derive(pd.DataFrame({
+        "symbol": ["HOT", "QUIET"], "name": ["H", "Q"], "sector": ["T"] * 2,
+        "price": [50.0, 50.0], "change_pct": [0.0] * 2,
+        "volume": [1e6] * 2, "market_cap": [1e9] * 2,
+        "week52_high": [60.0] * 2, "week52_low": [40.0] * 2,
+        "sma50": [50.0] * 2, "sma200": [50.0] * 2,
+        "avg_volume_10d": [3e6, 0.5e6], "avg_volume_3m": [2e6, 2e6],
+        "earnings_ts": [np.nan] * 2,
+    }))
+    vtrow = dict(zip(vt["symbol"], vt.to_dict("records"), strict=True))
+    check("recent pace running above the quarterly baseline",
+          abs(vtrow["HOT"]["volume_trend"] - 150.0) < 1e-9,
+          vtrow["HOT"]["volume_trend"])
+    check("recent pace running below the quarterly baseline",
+          abs(vtrow["QUIET"]["volume_trend"] - 25.0) < 1e-9,
+          vtrow["QUIET"]["volume_trend"])
+    check("voltrend resolves", screen.resolve("voltrend") == "volume_trend")
+    check("volume trend tracks two rolling averages, not today's tape, so "
+          "it narrows safely stale",
+          "volume_trend" in screen.STATIC_SAFE
+          and "volume_trend" not in screen.LIVE_COLUMNS)
+
     # Today's dollar volume only rises, so prefiltering on a stale one would
     # drop the names that have since crossed the line. The average is a
     # standing fact about the name and narrows safely.

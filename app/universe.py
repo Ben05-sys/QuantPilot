@@ -270,6 +270,14 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
         df["turnover_pct"] = safe(df["volume"], df["shares_outstanding"]) * 100
     else:
         df["turnover_pct"] = np.nan
+    # The last two weeks' average volume against the last quarter's, as a
+    # percent: 100 is business as usual. Distinct from `rel_volume`, which
+    # is today alone against the average — this says whether an elevation
+    # has already become the new normal or is still fresh.
+    if "avg_volume_10d" in df.columns and "avg_volume_3m" in df.columns:
+        df["volume_trend"] = safe(df["avg_volume_10d"], df["avg_volume_3m"]) * 100
+    else:
+        df["volume_trend"] = np.nan
     # Where the last price sits in the day's range, 0 at the low and 100 at
     # the high. A stock closing at 95 is a different tape from one closing
     # at 15 on the same percentage change. NaN, not 50, when the range has
