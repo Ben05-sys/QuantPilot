@@ -50,7 +50,7 @@ jobs:
             echo "docs/demo/data.js missing — run tools/build_demo.py"; exit 1; }
           ls -la docs/demo
 
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v3
         with:
           path: docs/demo
