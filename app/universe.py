@@ -457,6 +457,21 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
         df["peg"] = safe(df["pe"], df["eps_growth"].where(df["eps_growth"] > 0))
     else:
         df["peg"] = np.nan
+    # P/E against the stock's own sector average, as a percent — cheap or
+    # rich relative to actual peers. Cap-weighted like `rs_sector` above;
+    # loss-makers are excluded from the average, same reason as
+    # `earnings_yield`, and get a null spread of their own.
+    if "sector" in df.columns and "pe" in df.columns:
+        pe_w = df["market_cap"].fillna(0).where(df["pe"] > 0, 0)
+        pe_parts = pd.DataFrame(
+            {"sector": df["sector"], "w": pe_w, "pw": df["pe"].fillna(0) * pe_w})
+        pe_agg = pe_parts.groupby("sector", dropna=True).agg(
+            w=("w", "sum"), pw=("pw", "sum"))
+        sector_pe = df["sector"].map(pe_agg["pw"] / pe_agg["w"].replace(0, np.nan))
+        df["pe_spread"] = safe(
+            df["pe"].where(df["pe"] > 0) - sector_pe, sector_pe) * 100
+    else:
+        df["pe_spread"] = np.nan
     # Payout ratio: the dividend as a percent of trailing EPS — is the
     # dividend actually covered by earnings, or is it being paid out of
     # reserves. Null rather than negative when the name is loss-making:

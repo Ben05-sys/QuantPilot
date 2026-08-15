@@ -39,7 +39,7 @@ DERIVED = ["rel_volume", "rel_volume_raw", "rel_volume_10d", "session_fraction",
            "dollar_volume", "avg_dollar_volume", "day_range_pct", "gap_pct",
            "gap_filled", "true_range", "atr_pct", "sma_spread",
            "intraday_pct", "earnings_yield", "eps_growth", "payout_ratio",
-           "turnover_pct", "volume_trend"]
+           "turnover_pct", "volume_trend", "pe_spread"]
 
 # Joined onto the frame from the corporate calendar (app/calendars.py)
 # rather than read from the snapshot, plus what derive() computes from
@@ -131,6 +131,8 @@ STATIC_SAFE = {
     # Two rolling averages, same drift tolerance as `sma_spread`. Today's
     # raw `volume` is deliberately absent, same reasoning as the line above.
     "volume_trend",
+    # Built entirely from `pe`, itself already static-safe.
+    "pe_spread",
     # The corporate calendar. A declared dividend's four dates and its
     # amount are fixed the moment it is announced and do not move again,
     # so they are the most static fields here — safe to narrow on before
@@ -192,6 +194,7 @@ ALIASES = {
     "when": "earnings_when", "earningswhen": "earnings_when",
     "rs": "rs_sector", "vssector": "rs_sector",
     "sectorchg": "sector_change_pct",
+    "pespread": "pe_spread",
     # The dividend calendar. `exdiv` is the one people reach for — days
     # until the stock trades without its next payment — so it gets the
     # shortest name, and the raw timestamps sit behind `*date` spellings

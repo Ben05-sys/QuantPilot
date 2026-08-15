@@ -662,6 +662,26 @@ def main():
           "it narrows safely stale",
           "peg" in screen.STATIC_SAFE and "peg" not in screen.LIVE_COLUMNS)
 
+    print("\npe spread")
+    ps = derive(pd.DataFrame({
+        "symbol": ["CHEAP", "LOSER"], "name": ["C", "L"], "sector": ["T"] * 2,
+        "price": [50.0] * 2, "change_pct": [0.0] * 2,
+        "volume": [1e6] * 2, "avg_volume_3m": [1e6] * 2, "market_cap": [1e9] * 2,
+        "week52_high": [60.0] * 2, "week52_low": [40.0] * 2,
+        "sma50": [50.0] * 2, "sma200": [50.0] * 2,
+        "pe": [10.0, -5.0], "earnings_ts": [np.nan] * 2,
+    }))
+    psrow = dict(zip(ps["symbol"], ps.to_dict("records"), strict=True))
+    # Sole positive P/E in its sector, so it *is* the average: spread is 0.
+    check("the only profitable name in its sector is its own average",
+          abs(psrow["CHEAP"]["pe_spread"]) < 1e-9, psrow["CHEAP"]["pe_spread"])
+    check("a loss-making name has no multiple to compare, so it stays null",
+          np.isnan(psrow["LOSER"]["pe_spread"]), psrow["LOSER"]["pe_spread"])
+    check("pespread resolves", screen.resolve("pespread") == "pe_spread")
+    check("pe spread tracks pe, itself static-safe, so it narrows safely stale",
+          "pe_spread" in screen.STATIC_SAFE
+          and "pe_spread" not in screen.LIVE_COLUMNS)
+
     print("\npayout ratio")
     pr = derive(pd.DataFrame({
         "symbol": ["COVERED", "LOSER"], "name": ["C", "L"], "sector": ["T"] * 2,
