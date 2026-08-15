@@ -5,4 +5,4 @@
 # first person to hit that is a contributor who did nothing wrong.
 # Dependabot proposes the bump, CI proves it, then it lands.
 
-ruff==0.16.1
+ruff==0.16.2
