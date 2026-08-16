@@ -238,18 +238,22 @@ def main():
                  ]["symbol"].tolist() == ["BABA"])
     print("\nsector relative strength")
     from app.universe import derive as _derive
+    # A and B agree the Technology sector is up 10%; C and D put Energy
+    # down 10%, so the market as a whole nets to flat even though neither
+    # sector is. HALTED has no change_pct — a partial refresh or a trading
+    # halt — but carries most of Technology's market cap.
     sec = _derive(pd.DataFrame({
-        "symbol": ["A", "B", "HALTED"], "name": ["A", "B", "H"],
-        "sector": ["Technology"] * 3,
-        # A and B agree the sector is up 10%. HALTED has no change_pct —
-        # a partial refresh or a trading halt — but carries most of the
-        # sector's market cap.
-        "price": [100.0] * 3, "change_pct": [10.0, 10.0, np.nan],
-        "volume": [1e6] * 3, "avg_volume_3m": [1e6] * 3,
-        "market_cap": [1e9, 1e9, 8e9],
-        "week52_high": [120.0] * 3, "week52_low": [80.0] * 3,
-        "sma50": [100.0] * 3, "sma200": [100.0] * 3,
-        "earnings_ts": [np.nan] * 3,
+        "symbol": ["A", "B", "C", "D", "HALTED"],
+        "name": ["A", "B", "C", "D", "H"],
+        "sector": ["Technology", "Technology", "Energy", "Energy",
+                  "Technology"],
+        "price": [100.0] * 5,
+        "change_pct": [10.0, 10.0, -10.0, -10.0, np.nan],
+        "volume": [1e6] * 5, "avg_volume_3m": [1e6] * 5,
+        "market_cap": [1e9, 1e9, 1e9, 1e9, 8e9],
+        "week52_high": [120.0] * 5, "week52_low": [80.0] * 5,
+        "sma50": [100.0] * 5, "sma200": [100.0] * 5,
+        "earnings_ts": [np.nan] * 5,
     }))
     secrow = dict(zip(sec["symbol"], sec.to_dict("records"), strict=True))
     check("a name with no change_pct does not drag the sector average "
@@ -260,6 +264,12 @@ def main():
           abs(secrow["A"]["rs_sector"]) < 1e-9, secrow["A"]["rs_sector"])
     check("a halted name with no change_pct gets no relative strength either",
           pd.isna(secrow["HALTED"]["rs_sector"]))
+    check("a flat market, unlike a flat sector, is a genuinely different "
+          "baseline — A beats the tape even though it is level with its "
+          "own sector", abs(secrow["A"]["rs_market"] - 10.0) < 1e-9,
+          secrow["A"]["rs_market"])
+    check("a halted name gets no market-relative strength either",
+          pd.isna(secrow["HALTED"]["rs_market"]))
 
     check("alias is_adr also resolves", screen.resolve("is_adr") == "is_adr")
     check("ADRs narrow before re-pricing — domicile does not drift",

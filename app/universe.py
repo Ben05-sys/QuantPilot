@@ -384,6 +384,15 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
     else:
         df["sector_change_pct"] = np.nan
         df["rs_sector"] = np.nan
+    # The same question against the whole tape rather than just a sector —
+    # `rs_sector` answers "beating its peers", this answers "beating the
+    # market". Same cap-weighted, halted-name-excluded construction, just
+    # without the groupby: one weighted average across every row.
+    mkt_weights = df["market_cap"].fillna(0).where(df["change_pct"].notna(), 0)
+    mkt_w_sum = mkt_weights.sum()
+    market_change_pct = ((df["change_pct"].fillna(0) * mkt_weights).sum()
+                         / mkt_w_sum if mkt_w_sum else np.nan)
+    df["rs_market"] = df["change_pct"] - market_change_pct
 
     df["earnings_days"] = (df["earnings_ts"] - time.time()) / 86400.0
 
