@@ -122,13 +122,12 @@ STATIC_SAFE = {
     # today's tape — same drift tolerance as `earnings_yield`, whose
     # denominator this shares.
     "payout_ratio",
-    # Average dollar volume is a liquidity floor, not a reading of the
-    # tape: `avgdvol > 20m` means "this name normally trades enough to get
-    # out of", and half a day of price drift does not change that answer.
-    # Today's `dollar_volume` is deliberately absent, for the same reason
-    # `volume` is — it only rises, so a stale value drops the very names
-    # that have since crossed the threshold.
-    "avg_dollar_volume",
+    # avg_dollar_volume is NOT here, though it looks like a standing fact:
+    # it multiplies avg_volume_3m (slow) by `price` (live), so prefiltering
+    # on a stale snapshot answers with yesterday's price baked into today's
+    # threshold — the same two-clocks-in-one-number mistake `pct_52w_range`
+    # avoids by staying off this set. It's in LIVE_COLUMNS instead, same as
+    # `dollar_volume`, and gets re-priced before a screen sees it.
     # Two rolling averages, same drift tolerance as `sma_spread`. Today's
     # raw `volume` is deliberately absent, same reasoning as the line above.
     "volume_trend",

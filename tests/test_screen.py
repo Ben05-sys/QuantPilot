@@ -760,17 +760,21 @@ def main():
           and "volume_trend" not in screen.LIVE_COLUMNS)
 
     # Today's dollar volume only rises, so prefiltering on a stale one would
-    # drop the names that have since crossed the line. The average is a
-    # standing fact about the name and narrows safely.
+    # drop the names that have since crossed the line. The average looks
+    # like a standing fact but multiplies a static volume by a live price,
+    # so it waits for a live quote too, same as the raw figure.
     static, live = screen.split_live("avgdvol > 20m and dvol > 100m")
-    check("average dollar volume narrows before re-pricing",
-          static == "avgdvol > 20000000.0", static)
-    check("today's dollar volume waits for live quotes",
-          live == "dvol > 100000000.0", live)
+    check("neither dollar-volume line narrows before re-pricing",
+          static == "", static)
+    check("both wait for live quotes",
+          live == "avgdvol > 20000000.0 and dvol > 100000000.0", live)
     check("day range position is live",
           "day_range_pct" in screen.LIVE_COLUMNS)
     check("today's dollar volume is never prefiltered",
           "dollar_volume" not in screen.STATIC_SAFE)
+    check("nor is its average, which bakes in today's price",
+          "avg_dollar_volume" in screen.LIVE_COLUMNS
+          and "avg_dollar_volume" not in screen.STATIC_SAFE)
 
     dvol_filter = screen.filters_to_expr({"dvol": "Over $10M"})
     check("the dropdown compiles", dvol_filter == "avgdvol > 10m", dvol_filter)
