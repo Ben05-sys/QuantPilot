@@ -516,6 +516,28 @@ def main():
           "gap_filled" in screen.LIVE_COLUMNS
           and "gap_filled" not in screen.STATIC_SAFE)
 
+    print("\nextended-hours confirmation")
+    from app.universe import derive as _derive_ext
+    ext = _derive_ext(pd.DataFrame({
+        "symbol": ["UP", "REVERSE", "QUIET"],
+        "name": ["UP", "REVERSE", "QUIET"], "sector": ["T"] * 3,
+        "price": [1.0] * 3, "change_pct": [2.0, 2.0, 1.0],
+        "ext_change_pct": [1.5, -1.0, np.nan],
+        "volume": [1.0] * 3, "avg_volume_3m": [1.0] * 3,
+        "market_cap": [1.0] * 3, "week52_high": [1.0] * 3,
+        "week52_low": [1.0] * 3, "sma50": [1.0] * 3, "sma200": [1.0] * 3,
+        "earnings_ts": [np.nan] * 3})).set_index("symbol")
+    check("still bid after hours confirms the close",
+          ext.loc["UP", "ext_confirms"] is True)
+    check("fading after hours does not confirm",
+          ext.loc["REVERSE", "ext_confirms"] is False)
+    check("no extended print reads null, not False",
+          ext.loc["QUIET", "ext_confirms"] is None)
+    check("confirms resolves and stays live, not static-safe",
+          screen.resolve("confirms") == "ext_confirms"
+          and "ext_confirms" in screen.LIVE_COLUMNS
+          and "ext_confirms" not in screen.STATIC_SAFE)
+
     print("\nintraday percent")
     check("gapped up but sold off since the open reads negative",
           abs(row["CHEAP"]["intraday_pct"] - (-100 / 21)) < 1e-9,

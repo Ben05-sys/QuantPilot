@@ -309,6 +309,17 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
         df["gap_filled"] = filled
     else:
         df["gap_filled"] = np.nan
+    # Whether the extended print runs with the session's close or fades
+    # it. Null with no extended print to compare against.
+    if "ext_change_pct" in df.columns:
+        has_ext = df["ext_change_pct"].notna() & df["change_pct"].notna()
+        confirms = pd.Series([None] * len(df), index=df.index, dtype=object)
+        confirms.loc[has_ext] = (
+            (df.loc[has_ext, "ext_change_pct"] >= 0)
+            == (df.loc[has_ext, "change_pct"] >= 0))
+        df["ext_confirms"] = confirms
+    else:
+        df["ext_confirms"] = np.nan
     # The move since *today's open*, not yesterday's close. `chg` conflates
     # the overnight gap with what has happened during the session; a name
     # can gap up 5% and then sell off all day, which is a very different

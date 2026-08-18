@@ -39,7 +39,8 @@ DERIVED = ["rel_volume", "rel_volume_raw", "rel_volume_10d", "session_fraction",
            "dollar_volume", "avg_dollar_volume", "day_range_pct", "gap_pct",
            "gap_filled", "true_range", "atr_pct", "sma_spread",
            "intraday_pct", "earnings_yield", "eps_growth", "payout_ratio",
-           "turnover_pct", "volume_trend", "pe_spread", "rs_market"]
+           "turnover_pct", "volume_trend", "pe_spread", "rs_market",
+           "ext_confirms"]
 
 # Joined onto the frame from the corporate calendar (app/calendars.py)
 # rather than read from the snapshot, plus what derive() computes from
@@ -76,6 +77,8 @@ LIVE_COLUMNS = {
     "dollar_volume", "avg_dollar_volume", "day_range_pct",
     # Built from today's open, which a stale snapshot may not have yet.
     "gap_pct", "gap_filled", "intraday_pct",
+    # Tracks whichever extended print is live right now.
+    "ext_confirms",
     # Built from today's volume, which only rises as the session runs.
     "rel_volume_10d", "turnover_pct",
     # Built from today's high/low, which only widen as the session runs.
@@ -177,6 +180,7 @@ ALIASES = {
     "extchg": "ext_change_pct", "ext": "ext_change_pct",
     "preprice": "pre_price", "postprice": "post_price",
     "extprice": "ext_price", "session": "ext_label",
+    "confirms": "ext_confirms",
     "adr": "is_adr", "depositary": "is_adr",
     "relvolraw": "rel_volume_raw", "rawrelvol": "rel_volume_raw",
     "dvol": "dollar_volume", "dollarvol": "dollar_volume",
