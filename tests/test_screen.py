@@ -516,6 +516,28 @@ def main():
           "gap_filled" in screen.LIVE_COLUMNS
           and "gap_filled" not in screen.STATIC_SAFE)
 
+    print("\ngap held")
+    check("CHEAP's low broke below its own open: the gap didn't hold, "
+          "even though it never fully filled back to the prior close",
+          row["CHEAP"]["gap_held"] is False, row["CHEAP"]["gap_held"])
+    check("DEAR's high broke back above its own open",
+          row["DEAR"]["gap_held"] is False, row["DEAR"]["gap_held"])
+    check("no gap at all reads null, not False",
+          row["FLAT"]["gap_held"] is None, row["FLAT"]["gap_held"])
+    check("a gap up that never gave back the open reads held",
+          derive(pd.DataFrame({
+              "symbol": ["X"], "name": ["X"], "sector": ["T"], "price": [1.0],
+              "change_pct": [0.0], "volume": [1.0], "avg_volume_3m": [1.0],
+              "market_cap": [1.0], "week52_high": [1.0], "week52_low": [1.0],
+              "sma50": [1.0], "sma200": [1.0], "earnings_ts": [np.nan],
+              "open": [11.0], "prev_close": [10.0],
+              "day_low": [11.2], "day_high": [12.0],
+          }))["gap_held"].iloc[0] is True)
+    check("gapheld resolves", screen.resolve("gapheld") == "gap_held")
+    check("gap_held needs today's high/low, so it isn't prefiltered stale",
+          "gap_held" in screen.LIVE_COLUMNS
+          and "gap_held" not in screen.STATIC_SAFE)
+
     print("\nextended-hours confirmation")
     from app.universe import derive as _derive_ext
     ext = _derive_ext(pd.DataFrame({

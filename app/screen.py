@@ -37,7 +37,7 @@ DERIVED = ["rel_volume", "rel_volume_raw", "rel_volume_10d", "session_fraction",
            "earnings_when", "peg", "mktcap", "chg", "is_adr",
            "rs_sector", "sector_change_pct",
            "dollar_volume", "avg_dollar_volume", "day_range_pct", "gap_pct",
-           "gap_filled", "true_range", "atr_pct", "sma_spread",
+           "gap_filled", "gap_held", "true_range", "atr_pct", "sma_spread",
            "intraday_pct", "earnings_yield", "eps_growth", "payout_ratio",
            "turnover_pct", "volume_trend", "pe_spread", "rs_market",
            "ext_confirms"]
@@ -76,7 +76,7 @@ LIVE_COLUMNS = {
     # moves with all three of its.
     "dollar_volume", "avg_dollar_volume", "day_range_pct",
     # Built from today's open, which a stale snapshot may not have yet.
-    "gap_pct", "gap_filled", "intraday_pct",
+    "gap_pct", "gap_filled", "gap_held", "intraday_pct",
     # Tracks whichever extended print is live right now.
     "ext_confirms",
     # Built from today's volume, which only rises as the session runs.
@@ -193,6 +193,7 @@ ALIASES = {
     "inrange": "day_range_pct", "gap": "gap_pct",
     "intraday": "intraday_pct", "sinceopen": "intraday_pct",
     "gapfilled": "gap_filled", "fillsthegap": "gap_filled",
+    "gapheld": "gap_held", "heldthegap": "gap_held",
     "tr": "true_range", "truerange": "true_range",
     "atr": "atr_pct", "atrpct": "atr_pct",
     "when": "earnings_when", "earningswhen": "earnings_when",

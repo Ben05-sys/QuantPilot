@@ -309,6 +309,18 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
         df["gap_filled"] = filled
     else:
         df["gap_filled"] = np.nan
+    # Whether the opening print itself held as a floor or ceiling — a
+    # different question from `gap_filled` above, which asks about
+    # *yesterday's* close. Null, not False, with no gap to hold.
+    if {"open", "prev_close", "day_high", "day_low"} <= set(df.columns):
+        gap_up = df["open"] > df["prev_close"]
+        gap_down = df["open"] < df["prev_close"]
+        held = pd.Series([None] * len(df), index=df.index, dtype=object)
+        held.loc[gap_up] = df["day_low"] >= df["open"]
+        held.loc[gap_down] = df["day_high"] <= df["open"]
+        df["gap_held"] = held
+    else:
+        df["gap_held"] = np.nan
     # Whether the extended print runs with the session's close or fades
     # it. Null with no extended print to compare against.
     if "ext_change_pct" in df.columns:
