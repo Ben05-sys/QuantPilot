@@ -62,6 +62,10 @@ def main():
     df["sma200"] = df["sma50"] * 0.95
     df["eps_ttm"] = df["price"] / df["pe"]
     df["quote_type"] = ["EQUITY"] * 5 + ["ETF"]
+    # XOM gapped up and held it on real volume; NVDA gapped as big but gave
+    # it back; AAPL held a gap too small to matter for relvol.
+    df["gap_pct"] = [5.0, 4.5, 4.5, np.nan, np.nan, np.nan]
+    df["gap_held"] = [False, True, True, None, None, None]
     df["industry"] = ["Semiconductors", "Computer Manufacturing",
                       "Integrated oil", "Biotechnology: Laboratory",
                       "Pharmaceutical", None]
@@ -184,6 +188,10 @@ def main():
     check("every preset parses",
           all(isinstance(screen.mask(df, e), pd.Series)
               for _, e in screen.PRESETS))
+    gapgo = dict(screen.PRESETS)["Gap-and-Go"]
+    check("gap-and-go wants the gap held, not just made",
+          syms(df[screen.mask(df, gapgo)]) == ["XOM"],
+          syms(df[screen.mask(df, gapgo)]))
     check("every dropdown option parses",
           all(isinstance(screen.mask(df, frag), pd.Series)
               for _, _, opts in screen.FILTER_SPECS

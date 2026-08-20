@@ -749,6 +749,12 @@ PRESETS = [
     # setup needs and that a percentage change alone cannot express.
     ("Closing at the Highs", "dayrange > 90 and chg > 2 and dvol > 20m"),
     ("Real Money Moving", "dvol > 100m and relvol > 2 and avgdvol > 20m"),
+    # A gap alone is just an overnight print; this asks whether the market
+    # then agreed with it — the open held as a floor rather than getting
+    # filled — on volume that says real money showed up, not a print with
+    # nobody behind it.
+    ("Gap-and-Go", "gap > 4 and gapheld and relvol > 1.5 and vol > 500k "
+                   "and mcap > 300m"),
     ("Extended Movers", "extchg > 3 and mcap > 1b"),
     ("Gapping Down", "extchg < -4 and mcap > 1b"),
     ("China ADRs", 'adr and country == "China"'),
