@@ -66,6 +66,9 @@ def main():
     # it back; AAPL held a gap too small to matter for relvol.
     df["gap_pct"] = [5.0, 4.5, 4.5, np.nan, np.nan, np.nan]
     df["gap_held"] = [False, True, True, None, None, None]
+    # XOM yields enough but pays out more than it earns; JNJ yields enough
+    # and covers it comfortably. Only JNJ should clear "Covered Dividend".
+    df["payout_ratio"] = [np.nan, np.nan, 110.0, np.nan, 45.0, np.nan]
     df["industry"] = ["Semiconductors", "Computer Manufacturing",
                       "Integrated oil", "Biotechnology: Laboratory",
                       "Pharmaceutical", None]
@@ -192,6 +195,10 @@ def main():
     check("gap-and-go wants the gap held, not just made",
           syms(df[screen.mask(df, gapgo)]) == ["XOM"],
           syms(df[screen.mask(df, gapgo)]))
+    covdiv = dict(screen.PRESETS)["Covered Dividend"]
+    check("covered dividend wants the payout safe, not just the yield high",
+          syms(df[screen.mask(df, covdiv)]) == ["JNJ"],
+          syms(df[screen.mask(df, covdiv)]))
     check("every dropdown option parses",
           all(isinstance(screen.mask(df, frag), pd.Series)
               for _, _, opts in screen.FILTER_SPECS

@@ -744,6 +744,11 @@ PRESETS = [
     ("Golden Cross", "sma50 > sma200 and fromsma50 > 0 and mcap > 2b"),
     ("Earnings This Week", "0 < earnings < 7 and mcap > 2b"),
     ("Dividend Payers", "div > 3 and mcap > 5b and 0 < pe < 30"),
+    # A yield alone doesn't say the payment is safe. Payout under 75% of
+    # trailing earnings means there's room left even if earnings dip —
+    # over 100% is a dividend the company isn't earning this year.
+    ("Covered Dividend", "div > 2 and 0 < payout < 75 and mcap > 2b "
+                         "and vol > 500k"),
     ("Beating Its Sector", "rs > 3 and mcap > 2b and vol > 500k"),
     # Closing on the high, on real money — the two conditions a continuation
     # setup needs and that a percentage change alone cannot express.
