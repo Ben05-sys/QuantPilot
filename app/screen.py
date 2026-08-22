@@ -754,6 +754,12 @@ PRESETS = [
     # setup needs and that a percentage change alone cannot express.
     ("Closing at the Highs", "dayrange > 90 and chg > 2 and dvol > 20m"),
     ("Real Money Moving", "dvol > 100m and relvol > 2 and avgdvol > 20m"),
+    # Volume building over the last two weeks against a flat, tight tape —
+    # someone's accumulating a position before the price shows it. Both
+    # legs matter: rising volume alone is just noise, and a quiet tape
+    # alone is just nobody trading it.
+    ("Quiet Accumulation", "voltrend > 120 and atr < 3 and -2 < chg < 2 "
+                           "and mcap > 1b and vol > 300k"),
     # A gap alone is just an overnight print; this asks whether the market
     # then agreed with it — the open held as a floor rather than getting
     # filled — on volume that says real money showed up, not a print with

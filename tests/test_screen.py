@@ -69,6 +69,10 @@ def main():
     # XOM yields enough but pays out more than it earns; JNJ yields enough
     # and covers it comfortably. Only JNJ should clear "Covered Dividend".
     df["payout_ratio"] = [np.nan, np.nan, 110.0, np.nan, 45.0, np.nan]
+    # JNJ is quietly building volume on a flat tape; NVDA has the volume
+    # but is too choppy, AAPL and SPY are flat but volume isn't building.
+    df["volume_trend"] = [160.0, 90.0, 200.0, 300.0, 135.0, 110.0]
+    df["atr_pct"] = [5.0, 1.5, 4.0, 15.0, 1.8, 1.0]
     df["industry"] = ["Semiconductors", "Computer Manufacturing",
                       "Integrated oil", "Biotechnology: Laboratory",
                       "Pharmaceutical", None]
@@ -199,6 +203,11 @@ def main():
     check("covered dividend wants the payout safe, not just the yield high",
           syms(df[screen.mask(df, covdiv)]) == ["JNJ"],
           syms(df[screen.mask(df, covdiv)]))
+    quiacc = dict(screen.PRESETS)["Quiet Accumulation"]
+    check("quiet accumulation wants rising volume on a flat, tight tape, "
+          "not just one or the other",
+          syms(df[screen.mask(df, quiacc)]) == ["JNJ"],
+          syms(df[screen.mask(df, quiacc)]))
     check("every dropdown option parses",
           all(isinstance(screen.mask(df, frag), pd.Series)
               for _, _, opts in screen.FILTER_SPECS
