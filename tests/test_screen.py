@@ -294,6 +294,16 @@ def main():
           secrow["A"]["rs_market"])
     check("a halted name gets no market-relative strength either",
           pd.isna(secrow["HALTED"]["rs_market"]))
+    check("HALTED's 8b cap outranks A and B's 1b within Technology",
+          secrow["HALTED"]["cap_rank_sector"] == 1,
+          secrow["HALTED"]["cap_rank_sector"])
+    check("A and B tie for 2nd in Technology behind HALTED",
+          secrow["A"]["cap_rank_sector"] == 2
+          and secrow["B"]["cap_rank_sector"] == 2)
+    check("C and D tie for 1st in the separate Energy sector — rank is "
+          "per-sector, not tape-wide",
+          secrow["C"]["cap_rank_sector"] == 1
+          and secrow["D"]["cap_rank_sector"] == 1)
 
     check("alias is_adr also resolves", screen.resolve("is_adr") == "is_adr")
     check("ADRs narrow before re-pricing — domicile does not drift",

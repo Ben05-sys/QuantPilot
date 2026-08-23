@@ -404,9 +404,17 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
         agg["chg"] = agg["cw"] / agg["w"].replace(0, np.nan)
         df["sector_change_pct"] = df["sector"].map(agg["chg"])
         df["rs_sector"] = df["change_pct"] - df["sector_change_pct"]
+        # Where a name sits by size among its own peers — 1 is the
+        # largest market cap in the sector. `mcap > 10b` says a stock is
+        # big in absolute terms; this says whether it's a giant or a
+        # straggler relative to the group it's actually compared against.
+        # NaN market cap ranks as NaN, not last, same as pandas' default.
+        df["cap_rank_sector"] = df.groupby("sector")["market_cap"].rank(
+            ascending=False, method="min")
     else:
         df["sector_change_pct"] = np.nan
         df["rs_sector"] = np.nan
+        df["cap_rank_sector"] = np.nan
     # The same question against the whole tape rather than just a sector —
     # `rs_sector` answers "beating its peers", this answers "beating the
     # market". Same cap-weighted, halted-name-excluded construction, just
