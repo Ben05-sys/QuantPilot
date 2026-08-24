@@ -40,7 +40,7 @@ DERIVED = ["rel_volume", "rel_volume_raw", "rel_volume_10d", "session_fraction",
            "gap_filled", "gap_held", "true_range", "atr_pct", "sma_spread",
            "intraday_pct", "earnings_yield", "eps_growth", "payout_ratio",
            "turnover_pct", "volume_trend", "pe_spread", "rs_market",
-           "ext_confirms", "cap_rank_sector"]
+           "ext_confirms", "cap_rank_sector", "sector_rank"]
 
 # Joined onto the frame from the corporate calendar (app/calendars.py)
 # rather than read from the snapshot, plus what derive() computes from
@@ -68,7 +68,7 @@ LIVE_COLUMNS = {
     "day_high", "day_low", "pre_price", "pre_change_pct", "post_price",
     "post_change_pct", "ext_price", "ext_change_pct", "ext_label",
     "market_state", "chg", "mktcap", "rs_sector", "sector_change_pct",
-    "rs_market",
+    "rs_market", "sector_rank",
     # Derived from price, so they go stale with it.
     "pct_from_52w_high", "pct_from_52w_low", "pct_52w_range",
     "pct_from_sma50", "pct_from_sma200",
@@ -205,6 +205,7 @@ ALIASES = {
     "rsmkt": "rs_market", "vsmarket": "rs_market", "rsmarket": "rs_market",
     "pespread": "pe_spread",
     "caprank": "cap_rank_sector", "sectorcaprank": "cap_rank_sector",
+    "sectorrank": "sector_rank", "sectorperf": "sector_rank",
     # The dividend calendar. `exdiv` is the one people reach for — days
     # until the stock trades without its next payment — so it gets the
     # shortest name, and the raw timestamps sit behind `*date` spellings

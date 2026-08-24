@@ -304,6 +304,11 @@ def main():
           "per-sector, not tape-wide",
           secrow["C"]["cap_rank_sector"] == 1
           and secrow["D"]["cap_rank_sector"] == 1)
+    check("Technology, up 10%, leads the tape over Energy, down 10%",
+          secrow["A"]["sector_rank"] == 1
+          and secrow["C"]["sector_rank"] == 2)
+    check("everyone in a sector shares its rank",
+          secrow["HALTED"]["sector_rank"] == secrow["A"]["sector_rank"])
 
     check("alias is_adr also resolves", screen.resolve("is_adr") == "is_adr")
     check("ADRs narrow before re-pricing — domicile does not drift",

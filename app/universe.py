@@ -411,10 +411,18 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
         # NaN market cap ranks as NaN, not last, same as pandas' default.
         df["cap_rank_sector"] = df.groupby("sector")["market_cap"].rank(
             ascending=False, method="min")
+        # `rs_sector` says whether a stock beats its own sector; this says
+        # whether that sector itself is a leader or a laggard today. 1 is
+        # the best-performing sector on the tape. A sector with no priced
+        # names nets to NaN chg and ranks last of the ones with a reading,
+        # never a tied first.
+        sector_rank = agg["chg"].rank(ascending=False, method="min")
+        df["sector_rank"] = df["sector"].map(sector_rank)
     else:
         df["sector_change_pct"] = np.nan
         df["rs_sector"] = np.nan
         df["cap_rank_sector"] = np.nan
+        df["sector_rank"] = np.nan
     # The same question against the whole tape rather than just a sector —
     # `rs_sector` answers "beating its peers", this answers "beating the
     # market". Same cap-weighted, halted-name-excluded construction, just
