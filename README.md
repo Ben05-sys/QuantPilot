@@ -400,7 +400,7 @@ app/
   watchlist.py        thin layer over the positions table
   tray.py             Win32 tray icon and Ctrl+Alt+M, pure ctypes
   livenews.py           which finance networks are on air, and who they name
-  server.py           stdlib HTTP + SSE, 23 routes
+  server.py           stdlib HTTP + SSE, 27 routes
   web/index.html      the entire terminal, self-contained
   providers/          nasdaq · yahoo · cboe · sec, behind one Protocol
 tools/make_icon.py    generates the .ico with the stdlib alone
