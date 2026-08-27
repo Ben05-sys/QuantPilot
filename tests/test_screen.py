@@ -422,6 +422,26 @@ def main():
           }))["earnings_when"].iloc[0] is None)
     check("`when` is screenable", screen.resolve("when") == "earnings_when")
 
+    print("\nearnings-soon overnight exposure")
+    from app.universe import _earnings_soon
+    idx = ["AMC_OPEN", "AMC_SHUT", "BMO_SHUT", "NOSTATE"]
+    days = pd.Series([0.3] * 4, index=idx)
+    when = pd.Series(["AMC", "AMC", "BMO", "AMC"], index=idx)
+    state = pd.Series(["REGULAR", "POST", "PRE", None], index=idx)
+    soon = _earnings_soon(days, when, state)
+    check("AMC tonight while the session is open is overnight risk",
+          soon["AMC_OPEN"] is True)
+    check("same AMC report once the session has shut is not",
+          soon["AMC_SHUT"] is False)
+    check("BMO before tomorrow's open, session already shut, is risk",
+          soon["BMO_SHUT"] is True)
+    check("no session state to read is null, not a guess",
+          soon["NOSTATE"] is None)
+    check("soon resolves and is live, not static-safe",
+          screen.resolve("soon") == "earnings_soon"
+          and "earnings_soon" in screen.LIVE_COLUMNS
+          and "earnings_soon" not in screen.STATIC_SAFE)
+
     print("\ndollar volume and day range")
     dv = derive(pd.DataFrame({
         # A $2 stock and a $200 stock on identical share volume: the pair

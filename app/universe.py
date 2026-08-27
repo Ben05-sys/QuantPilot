@@ -222,6 +222,16 @@ def _earnings_when(timestamps: pd.Series) -> pd.Series:
     return out
 
 
+def _earnings_soon(days: pd.Series, when: pd.Series, state: pd.Series) -> pd.Series:
+    """Under 24h out, on the session-boundary side that makes it tonight's
+    risk. Null, never False, with no date or session state to judge it."""
+    regular, known = state == "REGULAR", state.notna()
+    dmh, amc, bmo = when == "DMH", when == "AMC", when == "BMO"
+    soon = days.between(0, 1, inclusive="left") & (
+        dmh | (regular & amc) | (~regular & bmo))
+    return soon.where(when.notna() & (dmh | known), None)
+
+
 def derive(df: pd.DataFrame) -> pd.DataFrame:
     """Add the computed columns. Everything here is arithmetic on fields we
     already have — nothing is invented or imputed. A field we cannot
@@ -477,6 +487,10 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
     # close are different risks entirely: one gaps the stock before you can
     # react, the other moves it while the market is shut.
     df["earnings_when"] = _earnings_when(df["earnings_ts"])
+    state = (df["market_state"] if "market_state" in df.columns
+             else pd.Series(None, index=df.index))
+    df["earnings_soon"] = _earnings_soon(
+        df["earnings_days"], df["earnings_when"], state)
     # Earnings yield: trailing EPS as a percent of price, the reciprocal of
     # P/E. A P/E is meaningless on a loss-making name — the ratio flips sign
     # and screens like `pe < 15` silently exclude it rather than flag the

@@ -40,7 +40,7 @@ DERIVED = ["rel_volume", "rel_volume_raw", "rel_volume_10d", "session_fraction",
            "gap_filled", "gap_held", "true_range", "atr_pct", "sma_spread",
            "intraday_pct", "earnings_yield", "eps_growth", "payout_ratio",
            "turnover_pct", "volume_trend", "pe_spread", "rs_market",
-           "ext_confirms", "cap_rank_sector", "sector_rank"]
+           "ext_confirms", "cap_rank_sector", "sector_rank", "earnings_soon"]
 
 # Joined onto the frame from the corporate calendar (app/calendars.py)
 # rather than read from the snapshot, plus what derive() computes from
@@ -79,6 +79,8 @@ LIVE_COLUMNS = {
     "gap_pct", "gap_filled", "gap_held", "intraday_pct",
     # Tracks whichever extended print is live right now.
     "ext_confirms",
+    # Depends on `market_state`, which flips at every session transition.
+    "earnings_soon",
     # Built from today's volume, which only rises as the session runs.
     "rel_volume_10d", "turnover_pct",
     # Built from today's high/low, which only widen as the session runs.
@@ -200,6 +202,7 @@ ALIASES = {
     "tr": "true_range", "truerange": "true_range",
     "atr": "atr_pct", "atrpct": "atr_pct",
     "when": "earnings_when", "earningswhen": "earnings_when",
+    "soon": "earnings_soon",
     "rs": "rs_sector", "vssector": "rs_sector",
     "sectorchg": "sector_change_pct",
     "rsmkt": "rs_market", "vsmarket": "rs_market", "rsmarket": "rs_market",
