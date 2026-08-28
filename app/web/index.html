@@ -2815,6 +2815,10 @@ function renderTicker(d){
 
   rows.push(`<div class="sect">VALUATION</div>`);
   kv("P/E", nf(st.pe,2));
+  // Sortable on both sides of zero, unlike P/E: a loss-maker's P/E is
+  // blank above, and this is the only number in the panel that still
+  // says something about the multiple when earnings are negative.
+  kvc("Earnings yield", fpct(st.earnings_yield,2), st.earnings_yield);
   kv("Forward P/E", nf(st.forward_pe,2));
   kv("P/B", nf(st.pb,2));
   kv("EPS ttm", nf(st.eps_ttm,2));
