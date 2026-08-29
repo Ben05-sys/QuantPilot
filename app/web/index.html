@@ -2819,6 +2819,9 @@ function renderTicker(d){
   // blank above, and this is the only number in the panel that still
   // says something about the multiple when earnings are negative.
   kvc("Earnings yield", fpct(st.earnings_yield,2), st.earnings_yield);
+  // P/E against forward growth. Blank, not a false bargain, whenever
+  // growth is flat or negative — computed that way in universe.py.
+  kv("PEG", nf(st.peg,2));
   kv("Forward P/E", nf(st.forward_pe,2));
   kv("P/B", nf(st.pb,2));
   kv("EPS ttm", nf(st.eps_ttm,2));
