@@ -2827,6 +2827,10 @@ function renderTicker(d){
   kv("EPS ttm", nf(st.eps_ttm,2));
   kv("EPS fwd", nf(st.eps_forward,2));
   kv("Dividend %", nf(st.dividend_yield,2));
+  // Dividend rate against trailing EPS — is the payment actually earned,
+  // or funded from reserves. Blank on a loss-making payer, computed that
+  // way in universe.py so a negative EPS never turns into a ratio.
+  kv("Payout %", nf(st.payout_ratio,1));
   kv("Shares out", fcap(st.shares_outstanding));
 
   rows.push(`<div class="sect">TREND</div>`);
