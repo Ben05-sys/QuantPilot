@@ -2836,6 +2836,10 @@ function renderTicker(d){
   rows.push(`<div class="sect">TREND</div>`);
   kvc("vs SMA50", fpct(st.pct_from_sma50,1), st.pct_from_sma50);
   kvc("vs SMA200", fpct(st.pct_from_sma200,1), st.pct_from_sma200);
+  // The two SMAs against each other, not against price — how developed a
+  // golden (or death) cross is, which "vs SMA50"/"vs SMA200" alone can't
+  // say since both are measured from a third, moving point.
+  kvc("SMA50 vs SMA200", fpct(st.sma_spread,1), st.sma_spread);
   // Yahoo already ships this as a percentage (16.04 means +16.04%).
   kvc("52w change", fpct(st.week52_change_pct,1), st.week52_change_pct);
   kvc("From 52w high", fpct(st.pct_from_52w_high,1), st.pct_from_52w_high);
