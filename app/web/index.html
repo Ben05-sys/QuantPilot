@@ -2811,6 +2811,10 @@ function renderTicker(d){
       st.rel_volume!=null ? st.rel_volume-1 : null);
   kv("Day range", (q.day_low!=null? nf(q.day_low,2):"—")+" – "
      +(q.day_high!=null? nf(q.day_high,2):"—"));
+  // True range (including the overnight gap) as a percent of price, so a
+  // $5 stock and a $500 stock read on the same scale. A magnitude, not a
+  // direction, so it gets no up/down color the way "Day range" gets none.
+  kv("ATR %", st.atr_pct!=null ? nf(st.atr_pct,2)+"%" : "—");
   kv("Prev close", nf(q.prev_close!=null?q.prev_close:st.prev_close,2));
 
   rows.push(`<div class="sect">VALUATION</div>`);
