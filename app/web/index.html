@@ -2809,6 +2809,12 @@ function renderTicker(d){
   kv("Avg vol 3m", fvol(st.avg_volume_3m));
   kvc("Rel volume", nf(st.rel_volume,2),
       st.rel_volume!=null ? st.rel_volume-1 : null);
+  // The last two weeks' average against the last quarter's — distinct from
+  // "Rel volume" above, which is only today against the average. 100 is
+  // business as usual; this says whether an elevation has already become
+  // the new normal rather than still being today's news.
+  kvc("Volume trend", st.volume_trend!=null ? nf(st.volume_trend,0)+"%" : "—",
+      st.volume_trend!=null ? st.volume_trend-100 : null);
   kv("Day range", (q.day_low!=null? nf(q.day_low,2):"—")+" – "
      +(q.day_high!=null? nf(q.day_high,2):"—"));
   // True range (including the overnight gap) as a percent of price, so a
