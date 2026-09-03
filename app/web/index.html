@@ -2825,6 +2825,10 @@ function renderTicker(d){
 
   rows.push(`<div class="sect">VALUATION</div>`);
   kv("P/E", nf(st.pe,2));
+  // How rich or cheap the multiple is next to its own sector's, not the
+  // market's — the P/E above states the number, this states whether that
+  // number is normal for the neighborhood it's being judged against.
+  kvc("P/E vs sector", fpct(st.pe_spread,1), st.pe_spread);
   // Sortable on both sides of zero, unlike P/E: a loss-maker's P/E is
   // blank above, and this is the only number in the panel that still
   // says something about the multiple when earnings are negative.
