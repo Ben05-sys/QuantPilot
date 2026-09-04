@@ -549,14 +549,15 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
     # than stored so it works on snapshots taken before the field existed —
     # `name` has always been there.
     #
-    # Anchored to the phrase, not to a bare ADR/ADS: the loose version
-    # matches ADS-TEC Energy, an Irish ordinary-share listing that is not
-    # an ADR.
+    # Anchored to the word "depositary", not to "american depositary"
+    # together (unsponsored ADRs often drop "American") or to a bare
+    # ADR/ADS, which matches ADS-TEC Energy, an Irish ordinary-share
+    # listing that is not an ADR.
     # A frame with no `name` at all yields "no ADRs" rather than raising:
     # this is the one derived column that depends on a text field, and a
     # missing one is not worth taking the whole load path down.
     df["is_adr"] = (df["name"].fillna("").str.contains(
-        "american depositary", case=False, regex=False)
+        "depositary", case=False, regex=False)
         if "name" in df.columns else False)
     # Convenience aliases so both spellings work in expressions.
     df["mktcap"] = df["market_cap"]

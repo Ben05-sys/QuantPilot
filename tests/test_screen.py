@@ -224,7 +224,8 @@ def main():
     print("\nADR detection")
     from app.universe import derive
     adr_df = derive(pd.DataFrame({
-        "symbol": ["BABA", "SONY", "ADSE", "AAPL", "SHEL", "SPOT", "NONE"],
+        "symbol": ["BABA", "SONY", "ADSE", "AAPL", "SHEL", "SPOT", "NONE",
+                   "UADR"],
         "name": ["Alibaba Group Holding Limited American Depositary Shares",
                  "Sony Group Corporation American Depositary Shares",
                  # The trap: 'ADS-TEC' contains ADS but is an Irish
@@ -233,19 +234,23 @@ def main():
                  "Apple Inc. Common Stock",
                  "Shell PLC American Depositary Shares (each representing two)",
                  "Spotify Technology S.A. Ordinary Shares",
-                 None],
+                 None,
+                 # No "American" — used to slip through entirely.
+                 "Some Foreign Bank Depositary Receipt"],
         "country": ["China", "Japan", "Ireland", "United States",
-                    "Netherlands", "Luxembourg", None],
-        "price": [150.0, 25.0, 8.0, 240.0, 70.0, 500.0, 1.0],
-        "change_pct": [2.0, 1.0, -1.0, 0.5, 3.0, -2.0, 0.0],
-        "volume": [5e6, 2e6, 1e5, 40e6, 3e6, 1e6, 5e5],
-        "market_cap": [275e9, 133e9, 3e8, 3.6e12, 240e9, 100e9, 1e7],
-        "avg_volume_3m": [4e6] * 7, "week52_high": [200.0] * 7,
-        "week52_low": [50.0] * 7, "sma50": [140.0] * 7, "sma200": [130.0] * 7,
-        "earnings_ts": [np.nan] * 7,
+                    "Netherlands", "Luxembourg", None, "Japan"],
+        "price": [150.0, 25.0, 8.0, 240.0, 70.0, 500.0, 1.0, 12.0],
+        "change_pct": [2.0, 1.0, -1.0, 0.5, 3.0, -2.0, 0.0, 0.5],
+        "volume": [5e6, 2e6, 1e5, 40e6, 3e6, 1e6, 5e5, 2e5],
+        "market_cap": [275e9, 133e9, 3e8, 3.6e12, 240e9, 100e9, 1e7, 5e9],
+        "avg_volume_3m": [4e6] * 8, "week52_high": [200.0] * 8,
+        "week52_low": [50.0] * 8, "sma50": [140.0] * 8, "sma200": [130.0] * 8,
+        "earnings_ts": [np.nan] * 8,
     }))
     adrs = sorted(adr_df[adr_df["is_adr"]]["symbol"].tolist())
-    check("ADRs are found", adrs == ["BABA", "SHEL", "SONY"], adrs)
+    check("ADRs are found", adrs == ["BABA", "SHEL", "SONY", "UADR"], adrs)
+    check("an unsponsored ADR without 'American' in the name is still "
+          "caught", "UADR" in adrs)
     check("ADS-TEC is not an ADR — 'ADS' in a company name is not a "
           "security type", "ADSE" not in adrs)
     check("ordinary shares of a foreign company are not ADRs",
@@ -897,7 +902,7 @@ def main():
     print("\ncountry grouping")
     cs = screen.country_summary(adr_df)
     check("every row with a country is placed",
-          cs["placed"] == 6, cs["placed"])
+          cs["placed"] == 7, cs["placed"])
     check("rows with no country are counted, not bucketed",
           cs["unplaced"] == 1, cs["unplaced"])
     check("placed plus unplaced is the whole frame",
