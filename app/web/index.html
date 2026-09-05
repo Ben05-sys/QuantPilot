@@ -2817,6 +2817,10 @@ function renderTicker(d){
       st.volume_trend!=null ? st.volume_trend-100 : null);
   kv("Day range", (q.day_low!=null? nf(q.day_low,2):"—")+" – "
      +(q.day_high!=null? nf(q.day_high,2):"—"));
+  // Move since today's open — distinct from the change badge above, which
+  // is measured against yesterday's close and so still carries any
+  // overnight gap. This is the session's own move, gap excluded.
+  kvc("Since open", fpct(st.intraday_pct,2), st.intraday_pct);
   // True range (including the overnight gap) as a percent of price, so a
   // $5 stock and a $500 stock read on the same scale. A magnitude, not a
   // direction, so it gets no up/down color the way "Day range" gets none.
