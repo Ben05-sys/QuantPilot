@@ -2815,6 +2815,11 @@ function renderTicker(d){
   // the new normal rather than still being today's news.
   kvc("Volume trend", st.volume_trend!=null ? nf(st.volume_trend,0)+"%" : "—",
       st.volume_trend!=null ? st.volume_trend-100 : null);
+  // Today's volume as a percent of the whole float — a different question
+  // from "Rel volume" above, which only asks whether today is busier than
+  // usual for this name. A thinly floated stock can turn over its entire
+  // share count on a day that isn't even elevated by that measure.
+  kv("Turnover %", st.turnover_pct!=null ? nf(st.turnover_pct,2)+"%" : "—");
   kv("Day range", (q.day_low!=null? nf(q.day_low,2):"—")+" – "
      +(q.day_high!=null? nf(q.day_high,2):"—"));
   // Move since today's open — distinct from the change badge above, which
