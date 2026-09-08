@@ -2802,6 +2802,11 @@ function renderTicker(d){
 
   rows.push(`<div class="sect">SNAPSHOT</div>`);
   kv("Sector", esc(st.sector||"—"));
+  // Where the *sector itself* ranks today, cap-weighted across every
+  // sector on the tape — distinct from the RS column, which measures this
+  // one stock against that sector. #1 is the day's leading sector.
+  kv("Sector rank today", st.sector_rank!=null
+     ? "#"+Math.round(st.sector_rank) : "—");
   kv("Industry", esc(st.industry||"—"));
   kv("Exchange", esc(st.exchange||"—"));
   kv("Market cap", fcap(q.market_cap!=null?q.market_cap:st.market_cap));
