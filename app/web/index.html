@@ -2827,6 +2827,10 @@ function renderTicker(d){
   kv("Turnover %", st.turnover_pct!=null ? nf(st.turnover_pct,2)+"%" : "—");
   kv("Day range", (q.day_low!=null? nf(q.day_low,2):"—")+" – "
      +(q.day_high!=null? nf(q.day_high,2):"—"));
+  // The overnight move alone — open against yesterday's close, before the
+  // session added anything of its own. Pairs with "Since open" below: gap
+  // first, then the session's own move, so the two never get conflated.
+  kvc("Gap %", fpct(st.gap_pct,2), st.gap_pct);
   // Move since today's open — distinct from the change badge above, which
   // is measured against yesterday's close and so still carries any
   // overnight gap. This is the session's own move, gap excluded.
