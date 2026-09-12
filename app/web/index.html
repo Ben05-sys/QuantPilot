@@ -2810,6 +2810,11 @@ function renderTicker(d){
   kv("Industry", esc(st.industry||"—"));
   kv("Exchange", esc(st.exchange||"—"));
   kv("Market cap", fcap(q.market_cap!=null?q.market_cap:st.market_cap));
+  // Size rank within the sector, not the market — distinct from "Sector
+  // rank today" above, which ranks the sector's own move. #1 is the
+  // largest name in this stock's own sector.
+  kv("Cap rank in sector", st.cap_rank_sector!=null
+     ? "#"+Math.round(st.cap_rank_sector) : "—");
   kv("Volume", fvol(q.volume!=null?q.volume:st.volume));
   kv("Avg vol 3m", fvol(st.avg_volume_3m));
   kvc("Rel volume", nf(st.rel_volume,2),
