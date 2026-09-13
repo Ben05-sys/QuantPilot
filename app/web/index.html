@@ -2836,6 +2836,12 @@ function renderTicker(d){
   // session added anything of its own. Pairs with "Since open" below: gap
   // first, then the session's own move, so the two never get conflated.
   kvc("Gap %", fpct(st.gap_pct,2), st.gap_pct);
+  // Whether the open itself held as a floor (gap up) or ceiling (gap
+  // down) through the session, not just that a gap happened — a failed
+  // gap that gets run over says something "Gap %" alone can't. Blank,
+  // not "No", with no gap to test.
+  kv("Gap held", st.gap_held===true ? "Yes"
+     : st.gap_held===false ? "No" : "—");
   // Move since today's open — distinct from the change badge above, which
   // is measured against yesterday's close and so still carries any
   // overnight gap. This is the session's own move, gap excluded.
