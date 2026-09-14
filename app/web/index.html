@@ -2842,6 +2842,11 @@ function renderTicker(d){
   // not "No", with no gap to test.
   kv("Gap held", st.gap_held===true ? "Yes"
      : st.gap_held===false ? "No" : "—");
+  // Whether the gap has since been retraded back through *yesterday's*
+  // close — a different question from "Gap held" above, which tests
+  // against *today's* open. Blank, not "No", with no gap to fill.
+  kv("Gap filled", st.gap_filled===true ? "Yes"
+     : st.gap_filled===false ? "No" : "—");
   // Move since today's open — distinct from the change badge above, which
   // is measured against yesterday's close and so still carries any
   // overnight gap. This is the session's own move, gap excluded.
