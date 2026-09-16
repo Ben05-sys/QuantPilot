@@ -2856,6 +2856,11 @@ function renderTicker(d){
   // is measured against yesterday's close and so still carries any
   // overnight gap. This is the session's own move, gap excluded.
   kvc("Since open", fpct(st.intraday_pct,2), st.intraday_pct);
+  // The dollar figure ATR % below turns into a percent — high minus low,
+  // widened to include the overnight gap when that gap is the bigger move.
+  // "Day range" above is high-low alone and misses a stock that gapped
+  // down hard and then sat still all session.
+  kv("True range", st.true_range!=null ? nf(st.true_range,2) : "—");
   // True range (including the overnight gap) as a percent of price, so a
   // $5 stock and a $500 stock read on the same scale. A magnitude, not a
   // direction, so it gets no up/down color the way "Day range" gets none.
