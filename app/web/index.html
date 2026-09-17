@@ -2852,6 +2852,12 @@ function renderTicker(d){
   // against *today's* open. Blank, not "No", with no gap to fill.
   kv("Gap filled", st.gap_filled===true ? "Yes"
      : st.gap_filled===false ? "No" : "—");
+  // Whether the extended-hours print is running with the regular session's
+  // move or fading it — a pre-market gap backed by an after-hours print in
+  // the same direction says something a lone percentage can't. Blank, not
+  // "No", with no extended print to compare against.
+  kv("Ext confirms", st.ext_confirms===true ? "Yes"
+     : st.ext_confirms===false ? "No" : "—");
   // Move since today's open — distinct from the change badge above, which
   // is measured against yesterday's close and so still carries any
   // overnight gap. This is the session's own move, gap excluded.
