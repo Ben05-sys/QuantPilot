@@ -2913,6 +2913,13 @@ function renderTicker(d){
   kvc("From 52w high", fpct(st.pct_from_52w_high,1), st.pct_from_52w_high);
   kv("Earnings in", st.earnings_days!=null
      ? Math.round(st.earnings_days)+" days" : "—");
+  // "Earnings in" above counts days and says nothing about which session
+  // boundary the print lands on. This says whether it's the very next
+  // one — an after-market print tonight, or a before-market print before
+  // the next open — the hold a position is actually exposed to right now.
+  // Blank, not "No", with no date or session state to judge it.
+  kv("Overnight earnings risk", st.earnings_soon===true ? "Yes"
+     : st.earnings_soon===false ? "No" : "—");
 
   // 52-week range bar with the current price marked.
   const lo = st.week52_low, hi = st.week52_high;
