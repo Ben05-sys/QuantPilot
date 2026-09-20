@@ -2928,6 +2928,11 @@ function renderTicker(d){
     rows.push(`<div class="sect">52 WEEK RANGE</div>`
       + `<div class="kv"><span>${nf(lo,2)}</span><span>${nf(hi,2)}</span></div>`
       + `<div id="rangeBar"><div id="rangeDot" style="left:${(p*100).toFixed(1)}%"></div></div>`);
+    // The dot above is a picture; this is the same reading as a sortable
+    // number, 0 at the low and 100 at the high — what the screener means
+    // by pos52 and the same fact the dot is pointing at.
+    rows.push(`<div class="kv"><span>Range position</span>`
+      + `<span>${nf(st.pct_52w_range,1)}%</span></div>`);
     // The bar above shows where price sits, not how wide the range is —
     // two names can dot the same spot on it and still be nothing alike,
     // one a tight channel and the other a wild swing.
