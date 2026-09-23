@@ -839,7 +839,13 @@ def group_summary(df: pd.DataFrame, column: str,
     part_of = part_of.dropna(subset=[column])
     out = []
     for name, part in part_of.groupby(column):
-        weights = part["market_cap"].fillna(0)
+        # A row with no change_pct (halted, or missing from a partial
+        # refresh) must not count at all — zero-filling it while keeping
+        # its full market-cap weight would drag the group toward flat
+        # exactly when the reading matters most. Same fix as the sector
+        # RS weighting in universe.py's derive().
+        weights = part["market_cap"].fillna(0).where(
+            part["change_pct"].notna(), 0)
         total = float(weights.sum())
         changes = part["change_pct"].fillna(0)
         avg = (float((changes * weights).sum() / total) if total > 0

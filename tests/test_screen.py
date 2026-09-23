@@ -936,6 +936,20 @@ def main():
     check("a plain mean would have said otherwise",
           abs((1.0 + -50.0) / 2 - grp["change_pct"]) > 20)
 
+    halted = derive(pd.DataFrame({
+        "symbol": ["BIG", "SMALL"], "sector": ["Technology"] * 2,
+        "country": ["United States"] * 2, "name": ["Big Co", "Small Co"],
+        "price": [100.0, 50.0], "change_pct": [np.nan, 10.0],
+        "volume": [1e7, 1e7], "market_cap": [9e11, 1e11],
+        "avg_volume_3m": [1e7] * 2, "week52_high": [200.0] * 2,
+        "week52_low": [1.0] * 2, "sma50": [90.0] * 2, "sma200": [80.0] * 2,
+        "earnings_ts": [np.nan] * 2,
+    }))
+    grp = screen.group_summary(halted, "sector")[0]
+    check("a halted name's missing change does not drag the group toward "
+          "flat while still counting its market cap",
+          abs(grp["change_pct"] - 10.0) < 0.01, grp["change_pct"])
+
     print("\nserialization")
     recs = screen.to_records(df, ["symbol", "pe", "market_cap"])
     check("NaN becomes null", recs[3]["pe"] is None, recs[3])
