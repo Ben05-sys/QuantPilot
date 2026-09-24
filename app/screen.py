@@ -847,9 +847,12 @@ def group_summary(df: pd.DataFrame, column: str,
         weights = part["market_cap"].fillna(0).where(
             part["change_pct"].notna(), 0)
         total = float(weights.sum())
-        changes = part["change_pct"].fillna(0)
-        avg = (float((changes * weights).sum() / total) if total > 0
-               else float(changes.mean() or 0))
+        # Zero weight means not one member of the group has both a cap
+        # and a change reading — the fallback used to average the
+        # zero-filled column anyway, reporting "flat" for a group that is
+        # actually just unpriced. Null, same as everywhere else here.
+        avg = (float((part["change_pct"].fillna(0) * weights).sum() / total)
+               if total > 0 else None)
         out.append({
             column: name,
             "name": str(name),
@@ -859,7 +862,7 @@ def group_summary(df: pd.DataFrame, column: str,
             "advancing": int((part["change_pct"] > 0).sum()),
             "declining": int((part["change_pct"] < 0).sum()),
         })
-    out.sort(key=lambda g: -g["change_pct"])
+    out.sort(key=lambda g: (g["change_pct"] is None, -(g["change_pct"] or 0)))
     return out
 
 

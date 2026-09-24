@@ -950,6 +950,22 @@ def main():
           "flat while still counting its market cap",
           abs(grp["change_pct"] - 10.0) < 0.01, grp["change_pct"])
 
+    all_halted = derive(pd.DataFrame({
+        "symbol": ["BIG", "SMALL"], "sector": ["Energy"] * 2,
+        "country": ["United States"] * 2, "name": ["Big Co", "Small Co"],
+        "price": [100.0, 50.0], "change_pct": [np.nan, np.nan],
+        "volume": [1e7, 1e7], "market_cap": [9e11, 1e11],
+        "avg_volume_3m": [1e7] * 2, "week52_high": [200.0] * 2,
+        "week52_low": [1.0] * 2, "sma50": [90.0] * 2, "sma200": [80.0] * 2,
+        "earnings_ts": [np.nan] * 2,
+    }))
+    grp = screen.group_summary(all_halted, "sector")[0]
+    check("a group with no priced member reports null, not a fake 0%",
+          grp["change_pct"] is None, grp["change_pct"])
+    check("that null group still sorts without crashing",
+          screen.group_summary(pd.concat([weighted, all_halted]),
+                               "sector"))
+
     print("\nserialization")
     recs = screen.to_records(df, ["symbol", "pe", "market_cap"])
     check("NaN becomes null", recs[3]["pe"] is None, recs[3])
