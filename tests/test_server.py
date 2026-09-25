@@ -26,7 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 TMP = Path(tempfile.mkdtemp(prefix="quantpilot-srv-"))
 os.environ["QUANTPILOT_HOME"] = str(TMP)
 
-from app import config, screen, server, store, stream, universe  # noqa: E402
+from app import calendars, config, screen, server, store, stream, universe  # noqa: E402
 
 PASS = FAIL = SKIP = 0
 
@@ -258,6 +258,24 @@ def main():
     check("delete works", not any(s["name"] == "t1" for s in body["screens"]))
     status, body = post(base + "/api/screens", token, {"action": "save"})
     check("a nameless save is a 400", status == 400)
+
+    print("\ndividend calendar")
+    # S02 goes ex with no known amount yet, as a partial calendar refresh
+    # would leave it — it must not drag the day's average toward zero.
+    ex_ts = time.time() + 5 * 86400
+    calendars.dividends._data = {
+        "S01": {"symbol": "S01", "ex_ts": ex_ts, "amount": 0.26},
+        "S02": {"symbol": "S02", "ex_ts": ex_ts},
+    }
+    calendars.dividends._at = time.time()
+    status, body = get(base + "/api/dividends?days=14", token)
+    check("dividends 200", status == 200 and len(body["days"]) == 1, body)
+    day = body["days"][0]
+    check("both names count toward the day", day["count"] == 2, day)
+    expected = 0.26 * 100 / 13.0  # S01's price in seed() is 10 + 1*3
+    check("a name with no known amount does not drag the average toward "
+          "zero while still counting toward it",
+          abs(day["total_drop"] - expected) < 0.01, day)
 
     print("\nlive routes (need network)")
     status, body = get(base + "/api/quotes?symbols=AAPL,MSFT", token)

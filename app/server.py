@@ -1163,17 +1163,21 @@ class Handler(BaseHTTPRequestHandler):
                 continue
             key = datetime.fromtimestamp(ts, clock.EASTERN).strftime("%Y-%m-%d")
             buckets.setdefault(key, []).append(row)
-        out = [{"date": key,
+        out = []
+        for key, items in sorted(buckets.items()):
+            # A name still missing div_amount (a partial calendar
+            # refresh) must not count as a 0% drop while still counting
+            # toward the average.
+            drops = [i["div_drop_pct"] for i in items
+                     if i.get("div_drop_pct") is not None]
+            out.append({
+                "date": key,
                 "weekday": datetime.strptime(key, "%Y-%m-%d").strftime("%a"),
                 "count": len(items),
                 "market_cap": sum(i.get("market_cap") or 0 for i in items),
-                # What a day of ex-dividends is worth in cash, across the
-                # names on it. The one figure that says whether a date
-                # matters to the tape or is a handful of small payers.
-                "total_drop": sum((i.get("div_drop_pct") or 0)
-                                  for i in items) / max(len(items), 1),
-                "rows": items}
-               for key, items in sorted(buckets.items())]
+                "total_drop": sum(drops) / len(drops) if drops else None,
+                "rows": items,
+            })
         self._json({"days": out, "total": total, "window": days,
                     "calendar": calendars.status()["dividends"],
                     "as_of": time.time()})
