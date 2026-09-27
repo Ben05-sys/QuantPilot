@@ -514,9 +514,14 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
     # `eps_growth` above finally supplies the missing term. Null whenever
     # growth is zero or negative rather than dividing by it — a shrinking
     # or flat estimate would flip the sign into something that reads like
-    # a bargain when it is actually a business going backwards.
+    # a bargain when it is actually a business going backwards. Same guard
+    # on `pe` itself: a loss-making name's P/E is already meaningless (the
+    # reason `earnings_yield` exists), and dividing that negative multiple
+    # by a positive growth rate lands on a small negative PEG that a
+    # `peg < 1` screen reads as a bargain rather than the noise it is.
     if "pe" in df.columns:
-        df["peg"] = safe(df["pe"], df["eps_growth"].where(df["eps_growth"] > 0))
+        df["peg"] = safe(df["pe"].where(df["pe"] > 0),
+                         df["eps_growth"].where(df["eps_growth"] > 0))
     else:
         df["peg"] = np.nan
     # P/E against the stock's own sector average, as a percent — cheap or

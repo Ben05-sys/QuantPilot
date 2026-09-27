@@ -762,13 +762,15 @@ def main():
 
     print("\npeg")
     pg = derive(pd.DataFrame({
-        "symbol": ["GROWER", "DECLINER"], "name": ["G", "D"], "sector": ["T"] * 2,
-        "price": [50.0, 50.0], "change_pct": [0.0] * 2,
-        "volume": [1e6] * 2, "avg_volume_3m": [1e6] * 2, "market_cap": [1e9] * 2,
-        "week52_high": [60.0] * 2, "week52_low": [40.0] * 2,
-        "sma50": [50.0] * 2, "sma200": [50.0] * 2,
-        "pe": [20.0, 15.0], "eps_ttm": [2.0, 2.0], "eps_forward": [2.5, 1.5],
-        "earnings_ts": [np.nan] * 2,
+        "symbol": ["GROWER", "DECLINER", "LOSSCO"],
+        "name": ["G", "D", "L"], "sector": ["T"] * 3,
+        "price": [50.0, 50.0, 50.0], "change_pct": [0.0] * 3,
+        "volume": [1e6] * 3, "avg_volume_3m": [1e6] * 3, "market_cap": [1e9] * 3,
+        "week52_high": [60.0] * 3, "week52_low": [40.0] * 3,
+        "sma50": [50.0] * 3, "sma200": [50.0] * 3,
+        "pe": [20.0, 15.0, -20.0],
+        "eps_ttm": [2.0, 2.0, -2.5], "eps_forward": [2.5, 1.5, -1.0],
+        "earnings_ts": [np.nan] * 3,
     }))
     pgrow = dict(zip(pg["symbol"], pg.to_dict("records"), strict=True))
     check("growing name: peg is P/E over the growth rate eps_growth supplies",
@@ -776,6 +778,11 @@ def main():
     check("shrinking estimates: peg stays null rather than flip sign into "
           "a fake bargain",
           np.isnan(pgrow["DECLINER"]["peg"]), pgrow["DECLINER"]["peg"])
+    check("a loss-maker's negative P/E is already meaningless, so peg "
+          "stays null even while it narrows its losses, rather than "
+          "landing on a small negative number a 'peg < 1' screen would "
+          "read as a bargain",
+          np.isnan(pgrow["LOSSCO"]["peg"]), pgrow["LOSSCO"]["peg"])
     check("peg tracks the same slow-moving inputs as pe and eps_growth, so "
           "it narrows safely stale",
           "peg" in screen.STATIC_SAFE and "peg" not in screen.LIVE_COLUMNS)
