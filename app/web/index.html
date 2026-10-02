@@ -2824,6 +2824,12 @@ function renderTicker(d){
   kv("Avg vol 3m", fvol(st.avg_volume_3m));
   kvc("Rel volume", nf(st.rel_volume,2),
       st.rel_volume!=null ? st.rel_volume-1 : null);
+  // The same question against a two-week baseline instead of a three-month
+  // one — a name that has been busy for a fortnight has already lifted its
+  // own 10-day average, so a reading near 1 here beside a high "Rel volume"
+  // says today's activity is now the norm rather than still being news.
+  kvc("Rel volume (10d)", nf(st.rel_volume_10d,2),
+      st.rel_volume_10d!=null ? st.rel_volume_10d-1 : null);
   // The last two weeks' average against the last quarter's — distinct from
   // "Rel volume" above, which is only today against the average. 100 is
   // business as usual; this says whether an elevation has already become
