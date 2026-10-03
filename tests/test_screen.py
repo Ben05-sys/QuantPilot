@@ -956,6 +956,8 @@ def main():
     check("a halted name's missing change does not drag the group toward "
           "flat while still counting its market cap",
           abs(grp["change_pct"] - 10.0) < 0.01, grp["change_pct"])
+    check("the halted name's own cap still counts toward the group total",
+          abs(grp["market_cap"] - 1e12) < 1, grp["market_cap"])
 
     all_halted = derive(pd.DataFrame({
         "symbol": ["BIG", "SMALL"], "sector": ["Energy"] * 2,
@@ -969,6 +971,8 @@ def main():
     grp = screen.group_summary(all_halted, "sector")[0]
     check("a group with no priced member reports null, not a fake 0%",
           grp["change_pct"] is None, grp["change_pct"])
+    check("but a fully halted sector is not a $0 sector",
+          abs(grp["market_cap"] - 1e12) < 1, grp["market_cap"])
     check("that null group still sorts without crashing",
           screen.group_summary(pd.concat([weighted, all_halted]),
                                "sector"))

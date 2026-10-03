@@ -853,12 +853,18 @@ def group_summary(df: pd.DataFrame, column: str,
         # actually just unpriced. Null, same as everywhere else here.
         avg = (float((part["change_pct"].fillna(0) * weights).sum() / total)
                if total > 0 else None)
+        # The group's actual size, not the weight behind the average above:
+        # a halted name still has a market cap even on a day it has no
+        # change_pct, and `total` above drops it to zero right when the
+        # group is least priced — reporting a trillion-dollar sector as
+        # "$0 cap" the day it's most worth knowing about.
+        group_cap = float(part["market_cap"].sum())
         out.append({
             column: name,
             "name": str(name),
             "change_pct": avg,
             "count": int(len(part)),
-            "market_cap": total,
+            "market_cap": group_cap,
             "advancing": int((part["change_pct"] > 0).sum()),
             "declining": int((part["change_pct"] < 0).sum()),
         })
