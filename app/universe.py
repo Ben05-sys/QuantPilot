@@ -224,11 +224,18 @@ def _earnings_when(timestamps: pd.Series) -> pd.Series:
 
 def _earnings_soon(days: pd.Series, when: pd.Series, state: pd.Series) -> pd.Series:
     """Under 24h out, on the session-boundary side that makes it tonight's
-    risk. Null, never False, with no date or session state to judge it."""
+    risk. Null, never False, with no date or session state to judge it.
+
+    A BMO report due before the *next* open is exactly as much overnight
+    risk, while the regular session is still open, as an AMC report due
+    after *tonight's* close — both land in the same closed window between
+    now and the next bell. Only `~regular & bmo` used to catch the BMO
+    side, missing it while the session was still live.
+    """
     regular, known = state == "REGULAR", state.notna()
     dmh, amc, bmo = when == "DMH", when == "AMC", when == "BMO"
     soon = days.between(0, 1, inclusive="left") & (
-        dmh | (regular & amc) | (~regular & bmo))
+        dmh | (regular & (amc | bmo)) | (~regular & bmo))
     return soon.where(when.notna() & (dmh | known), None)
 
 

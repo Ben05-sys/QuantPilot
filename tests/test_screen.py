@@ -429,10 +429,10 @@ def main():
 
     print("\nearnings-soon overnight exposure")
     from app.universe import _earnings_soon
-    idx = ["AMC_OPEN", "AMC_SHUT", "BMO_SHUT", "NOSTATE"]
-    days = pd.Series([0.3] * 4, index=idx)
-    when = pd.Series(["AMC", "AMC", "BMO", "AMC"], index=idx)
-    state = pd.Series(["REGULAR", "POST", "PRE", None], index=idx)
+    idx = ["AMC_OPEN", "AMC_SHUT", "BMO_SHUT", "BMO_OPEN", "NOSTATE"]
+    days = pd.Series([0.3] * 5, index=idx)
+    when = pd.Series(["AMC", "AMC", "BMO", "BMO", "AMC"], index=idx)
+    state = pd.Series(["REGULAR", "POST", "PRE", "REGULAR", None], index=idx)
     soon = _earnings_soon(days, when, state)
     check("AMC tonight while the session is open is overnight risk",
           soon["AMC_OPEN"] is True)
@@ -440,6 +440,9 @@ def main():
           soon["AMC_SHUT"] is False)
     check("BMO before tomorrow's open, session already shut, is risk",
           soon["BMO_SHUT"] is True)
+    check("BMO before tomorrow's open is the same overnight risk while "
+          "the session is still open, not just once it has shut",
+          soon["BMO_OPEN"] is True)
     check("no session state to read is null, not a guess",
           soon["NOSTATE"] is None)
     check("soon resolves and is live, not static-safe",
