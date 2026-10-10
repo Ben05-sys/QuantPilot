@@ -32,6 +32,18 @@ def _noop(msg: str, frac: float) -> None:
     pass
 
 
+def _rating(v):
+    """Yahoo ships `averageAnalystRating` as a string like "2.3 - Buy", not
+    a plain number — `_num` alone always fails to parse that, so the field
+    has been silently null for every row rather than merely unavailable
+    for some. The leading score is the number; the label is redundant
+    with it.
+    """
+    if isinstance(v, str):
+        v = v.split(" - ", 1)[0].strip()
+    return yahoo._num(v)
+
+
 def _q(quote) -> dict:
     """Yahoo quote -> universe columns. `extra` is the raw 83-field payload."""
     e = quote.extra or {}
@@ -63,7 +75,7 @@ def _q(quote) -> dict:
         "week52_change_pct": n(e.get("fiftyTwoWeekChangePercent")),
         "sma50": n(e.get("fiftyDayAverage")),
         "sma200": n(e.get("twoHundredDayAverage")),
-        "analyst_rating": n(e.get("averageAnalystRating")),
+        "analyst_rating": _rating(e.get("averageAnalystRating")),
         "earnings_ts": n(e.get("earningsTimestamp")),
         "exchange": e.get("fullExchangeName"),
         "quote_type": e.get("quoteType"),

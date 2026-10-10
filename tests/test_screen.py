@@ -450,6 +450,16 @@ def main():
           and "earnings_soon" in screen.LIVE_COLUMNS
           and "earnings_soon" not in screen.STATIC_SAFE)
 
+    print("\nanalyst rating")
+    from app.universe import _rating
+    check("Yahoo's score-and-label string parses to just the score",
+          _rating("2.3 - Buy") == 2.3, _rating("2.3 - Buy"))
+    check("a single-word label parses the same way",
+          _rating("1.8 - Strong Buy") == 1.8, _rating("1.8 - Strong Buy"))
+    check("a bare number still passes through unchanged",
+          _rating(2.3) == 2.3, _rating(2.3))
+    check("nothing to parse stays null, not a guess", _rating(None) is None)
+
     print("\ndollar volume and day range")
     dv = derive(pd.DataFrame({
         # A $2 stock and a $200 stock on identical share volume: the pair
