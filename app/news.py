@@ -104,8 +104,10 @@ def movers(df, count: int = MOVER_COUNT) -> list[dict]:
         return []
     ranked = liquid.reindex(
         liquid["change_pct"].abs().sort_values(ascending=False).index)
+    # `r.name_` was never the column — itertuples keeps "name" as
+    # "name" — so this always missed and every mover reported null.
     return [{"symbol": r.symbol, "change_pct": float(r.change_pct),
-             "name": r.name_ if hasattr(r, "name_") else None}
+             "name": getattr(r, "name", None)}
             for r in ranked.head(count).itertuples(index=False)]
 
 
