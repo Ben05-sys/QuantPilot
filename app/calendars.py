@@ -220,7 +220,10 @@ def ipo_board() -> dict:
         "priced": list(reversed(data.get("priced") or [])),
         "filed": list(reversed(data.get("filed") or [])),
         "withdrawn": list(reversed(data.get("withdrawn") or [])),
-        "as_of": time.time() - (ipos.age or 0),
+        # `ipos.age or 0` used to read a never-loaded calendar (age None)
+        # as age zero, reporting as_of = now — a board that has never
+        # fetched anything claiming to be freshly current.
+        "as_of": (time.time() - ipos.age) if ipos.age is not None else None,
         "stale": ipos.stale(),
         "error": ipos.error,
     }

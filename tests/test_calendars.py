@@ -285,6 +285,17 @@ def main():
     check("and has no age to report, rather than an age of zero",
           calendars.dividends.age is None)
 
+    print("\nan IPO board that has never loaded says so")
+    calendars.ipos._data, calendars.ipos._at = None, 0.0
+    board = calendars.ipo_board()
+    check("every bucket is empty",
+          not any(board[k] for k in
+                  ("upcoming", "priced", "filed", "withdrawn")))
+    check("stale is reported", board["stale"])
+    check("and as_of is null, not 'now' — age None used to be read as "
+          "age zero, making an empty board look freshly current",
+          board["as_of"] is None, board["as_of"])
+
     print(f"\n{PASS} passed, {FAIL} failed\n")
     return 1 if FAIL else 0
 
