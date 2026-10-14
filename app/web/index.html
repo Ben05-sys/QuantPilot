@@ -2901,6 +2901,11 @@ function renderTicker(d){
   kv("EPS ttm", nf(st.eps_ttm,2));
   kv("EPS fwd", nf(st.eps_forward,2));
   kv("Dividend %", nf(st.dividend_yield,2));
+  // Nasdaq's indicated annual rate against today's price, not Yahoo's
+  // own trailing-based dividend_yield above — the two disagree exactly
+  // when a payer has just raised or cut, which is exactly when someone
+  // is looking. Blank until the calendar's indicated rate is known.
+  kv("Indicated yield %", nf(st.div_yield_upcoming,2));
   // Dividend rate against trailing EPS — is the payment actually earned,
   // or funded from reserves. Blank on a loss-making payer, computed that
   // way in universe.py so a negative EPS never turns into a ratio.
