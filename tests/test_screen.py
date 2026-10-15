@@ -747,9 +747,10 @@ def main():
           abs(eyrow["LOSER"]["earnings_yield"] - (-2.0)) < 1e-9,
           eyrow["LOSER"]["earnings_yield"])
     check("eyield resolves", screen.resolve("eyield") == "earnings_yield")
-    check("earnings yield tracks eps, not price, so it narrows safely stale",
-          "earnings_yield" in screen.STATIC_SAFE
-          and "earnings_yield" not in screen.LIVE_COLUMNS)
+    check("earnings yield divides by today's price, so it goes stale "
+          "with it like pct_from_sma50 does",
+          "earnings_yield" in screen.LIVE_COLUMNS
+          and "earnings_yield" not in screen.STATIC_SAFE)
 
     print("\neps growth")
     eg = derive(pd.DataFrame({

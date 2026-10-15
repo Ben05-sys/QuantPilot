@@ -90,6 +90,10 @@ LIVE_COLUMNS = {
     # reason `pct_from_sma50` does — and the whole point of asking is the
     # size of the drop relative to where the stock is *now*.
     "div_drop_pct", "div_yield_upcoming",
+    # Trailing EPS over today's price — the reciprocal of `pe`, but unlike
+    # that raw snapshot field this one is built fresh from `price` every
+    # time, so it goes stale with it exactly as `pct_from_sma50` does.
+    "earnings_yield",
 }
 
 # Fields safe to narrow with *before* re-pricing. The distinction is not
@@ -115,17 +119,13 @@ STATIC_SAFE = {
     # never touches today's price — only the two endpoints, which move on
     # their own slow schedule.
     "range_52w_width",
-    # Same drift tolerance as `pe`, whose reciprocal this is: trailing EPS
-    # barely moves intraday, so a few hours of price drift does not change
-    # which side of a yield threshold a name falls on.
-    "earnings_yield",
     # Both inputs are analyst estimates that update on their own schedule,
     # not with the tape — same drift tolerance as the `eps_ttm`/`eps_forward`
     # they're built from.
     "eps_growth",
     # Dividend rate and trailing EPS are both slow-moving fundamentals, not
-    # today's tape — same drift tolerance as `earnings_yield`, whose
-    # denominator this shares.
+    # today's tape — unlike `earnings_yield`, this ratio never divides by
+    # price.
     "payout_ratio",
     # avg_dollar_volume is NOT here, though it looks like a standing fact:
     # it multiplies avg_volume_3m (slow) by `price` (live), so prefiltering
