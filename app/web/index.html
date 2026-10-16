@@ -2880,6 +2880,11 @@ function renderTicker(d){
   kv("Prev close", nf(q.prev_close!=null?q.prev_close:st.prev_close,2));
 
   rows.push(`<div class="sect">VALUATION</div>`);
+  // 1 is Strong Buy, 5 is Strong Sell on Yahoo's own scale. Parsed out of
+  // a string like "2.3 - Buy" in universe.py's _rating() — that parsing
+  // was dead until a recent fix, and even fixed the number was computed
+  // but never rendered anywhere. Blank, not a guess, with no coverage.
+  kv("Analyst rating", nf(st.analyst_rating,2));
   kv("P/E", nf(st.pe,2));
   // How rich or cheap the multiple is next to its own sector's, not the
   // market's — the P/E above states the number, this states whether that
