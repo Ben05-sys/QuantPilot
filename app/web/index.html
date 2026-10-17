@@ -2814,6 +2814,11 @@ function renderTicker(d){
      ? "#"+Math.round(st.sector_rank) : "—");
   kv("Industry", esc(st.industry||"—"));
   kv("Exchange", esc(st.exchange||"—"));
+  // Years since listing, from ipo_year in the snapshot — computed in
+  // universe.py and screenable as ipoage/yearslisted, but never shown
+  // anywhere before. Blank, not 0, for a name with no ipo_year on file.
+  kv("IPO age", st.ipo_age_years!=null
+     ? Math.round(st.ipo_age_years)+" yr" : "—");
   kv("Market cap", fcap(q.market_cap!=null?q.market_cap:st.market_cap));
   // Size rank within the sector, not the market — distinct from "Sector
   // rank today" above, which ranks the sector's own move. #1 is the
