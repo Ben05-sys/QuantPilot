@@ -2940,8 +2940,12 @@ function renderTicker(d){
   kvc("52w change", fpct(st.week52_change_pct,1), st.week52_change_pct);
   kvc("From 52w high", fpct(st.pct_from_52w_high,1), st.pct_from_52w_high);
   kvc("From 52w low", fpct(st.pct_from_52w_low,1), st.pct_from_52w_low);
+  // BMO/AMC/DMH was already computed and shown on the Earnings board, but
+  // reading it for one stock meant leaving this panel to find the row.
   kv("Earnings in", st.earnings_days!=null
-     ? Math.round(st.earnings_days)+" days" : "—");
+     ? Math.round(st.earnings_days)+" days"
+       + (st.earnings_when ? ` (${esc(st.earnings_when)})` : "")
+     : "—");
   // "Earnings in" above counts days and says nothing about which session
   // boundary the print lands on. This says whether it's the very next
   // one — an after-market print tonight, or a before-market print before
