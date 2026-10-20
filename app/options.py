@@ -95,7 +95,11 @@ def _leg(c: dict) -> dict:
         "spread": (ask - bid) if (bid is not None and ask is not None) else None,
         "mid": ((bid + ask) / 2) if (bid is not None and ask is not None) else None,
         "volume": volume, "open_interest": oi,
-        "vol_oi": (volume / oi) if (volume and oi) else None,
+        # A contract that traded zero today still has a real ratio — 0 —
+        # against its open interest; `volume and oi` was treating that
+        # genuine zero the same as a missing field and nulling it out.
+        # Only `oi` being zero or unknown makes the ratio uncomputable.
+        "vol_oi": (volume / oi) if (oi and volume is not None) else None,
         "iv": _f(c.get("iv")),
         "delta": _f(c.get("delta")), "gamma": _f(c.get("gamma")),
         "theta": _f(c.get("theta")), "vega": _f(c.get("vega")),

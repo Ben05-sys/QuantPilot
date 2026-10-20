@@ -149,6 +149,19 @@ def run():
     check("total counts matches before the limit",
           options.unusual("TEST", limit=1)["total"] > 1)
 
+    print("\nvol_oi treats a real zero as a zero, not a null")
+    traded = options._leg({"bid": 1.0, "ask": 1.4, "volume": 0.0,
+                           "open_interest": 1000.0})
+    check("zero volume against known open interest is 0, not None",
+          traded["vol_oi"] == 0.0, traded["vol_oi"])
+    untradeable = options._leg({"bid": 1.0, "ask": 1.4, "volume": 50.0,
+                                "open_interest": 0.0})
+    check("zero open interest stays null — dividing by it would not",
+          untradeable["vol_oi"] is None)
+    unknown = options._leg({"bid": 1.0, "ask": 1.4, "open_interest": 1000.0})
+    check("a missing volume field stays null, not a guessed zero",
+          unknown["vol_oi"] is None)
+
     print("\nempty chain")
     empty = dict(fixture())
     empty["contracts"] = []
