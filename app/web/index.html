@@ -2925,8 +2925,13 @@ function renderTicker(d){
   // by day, but there was no way to ask the question for *this* one
   // stock without paging through that board to find it. Blank, not a
   // date, with nothing scheduled inside the calendar's window.
+  // The date alone makes you do the subtraction yourself; "Earnings in"
+  // below already gives a day count for the same kind of date, so this
+  // should too. Negative is a stock that went ex in the last day, same
+  // sign convention universe.py uses for ex_div_days itself.
   kv("Next ex-div", st.ex_div_ts!=null
-     ? edate(st.ex_div_ts)+" ("+nf(st.div_drop_pct,2)+"% drop)" : "—");
+     ? edate(st.ex_div_ts)+" ("+Math.round(st.ex_div_days)+"d, "
+       +nf(st.div_drop_pct,2)+"% drop)" : "—");
   kv("Shares out", fcap(st.shares_outstanding));
 
   rows.push(`<div class="sect">TREND</div>`);
