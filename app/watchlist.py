@@ -54,8 +54,12 @@ def toggle(symbol: str) -> bool:
 def enrich(rows: list[dict], quotes: dict) -> list[dict]:
     """Merge live quotes in and compute P&L where a cost basis exists.
 
-    A row with no shares gets no P&L rather than a zero: showing $0.00
-    profit on something you don't own reads as a real number and isn't.
+    `market_value` only needs shares and a live price — it used to sit
+    behind the same `basis` guard as P&L and went null on every position
+    logged without a cost basis, even though nothing about that number
+    was actually unknown. P&L itself still needs a basis to mean anything,
+    and a row with no shares gets none rather than a $0.00 that would read
+    as a real number and isn't.
     """
     out = []
     for row in rows:
@@ -72,11 +76,12 @@ def enrich(rows: list[dict], quotes: dict) -> list[dict]:
         shares = row.get("shares") or 0
         basis = row.get("cost_basis")
         price = q.get("price")
+        item["market_value"] = (shares * price
+                                if shares and price is not None else None)
         if shares and basis and price is not None:
-            item["market_value"] = shares * price
             item["pnl"] = (price - basis) * shares
             item["pnl_pct"] = ((price - basis) / basis * 100) if basis else None
         else:
-            item["market_value"] = item["pnl"] = item["pnl_pct"] = None
+            item["pnl"] = item["pnl_pct"] = None
         out.append(item)
     return out

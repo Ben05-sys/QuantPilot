@@ -1928,10 +1928,13 @@ function drawWatch(){
     return;
   }
   el.innerHTML = rows.map(r=>{
-    const pnl = r.pnl==null ? "" :
+    const pnl = r.pnl!=null ?
       `<div class="wpnl"><span class="${cls(r.pnl)}">${r.pnl>0?"+":""}`
       + `${nf(r.pnl,2)}</span> <span class="dim">(${fpct(r.pnl_pct)})</span> `
-      + `<span class="dim">${nf(r.shares,0)} @ ${nf(r.cost_basis,2)}</span></div>`;
+      + `<span class="dim">${nf(r.shares,0)} @ ${nf(r.cost_basis,2)}</span></div>`
+      : (r.shares && r.market_value!=null ?
+        `<div class="wpnl"><span class="dim">${nf(r.shares,0)} sh · worth `
+        + `${nf(r.market_value,2)}</span></div>` : "");
     return `<div class="wrow" data-sym="${esc(r.symbol)}">`
       + `<span class="ws">${esc(r.symbol)}</span>`
       + `<span class="wp">${nf(r.price,2)}</span>`
@@ -1966,6 +1969,7 @@ function applyWatchTicks(quotes){
     if(!q) continue;
     if(q.price!=null){ r.price = q.price; touched = true; }
     if(q.change_pct!=null) r.change_pct = q.change_pct;
+    if(r.shares && r.price!=null) r.market_value = r.shares * r.price;
     if(r.shares && r.cost_basis && r.price!=null){
       r.pnl = (r.price - r.cost_basis) * r.shares;
       r.pnl_pct = (r.price - r.cost_basis) / r.cost_basis * 100;
