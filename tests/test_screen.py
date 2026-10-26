@@ -821,6 +821,18 @@ def main():
           "pe_spread" in screen.STATIC_SAFE
           and "pe_spread" not in screen.LIVE_COLUMNS)
 
+    print("\npb spread")
+    bs = derive(ps.assign(pb=[2.0, -3.0]))
+    bsrow = dict(zip(bs["symbol"], bs.to_dict("records"), strict=True))
+    check("sole positive-book name in its sector is its own average: 0",
+          abs(bsrow["CHEAP"]["pb_spread"]) < 1e-9)
+    check("negative book value has no multiple to compare, stays null",
+          np.isnan(bsrow["LOSER"]["pb_spread"]))
+    check("pbspread resolves", screen.resolve("pbspread") == "pb_spread")
+    check("pb spread tracks pb, itself static-safe",
+          "pb_spread" in screen.STATIC_SAFE
+          and "pb_spread" not in screen.LIVE_COLUMNS)
+
     print("\npayout ratio")
     pr = derive(pd.DataFrame({
         "symbol": ["COVERED", "LOSER"], "name": ["C", "L"], "sector": ["T"] * 2,

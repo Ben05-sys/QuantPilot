@@ -39,7 +39,7 @@ DERIVED = ["rel_volume", "rel_volume_raw", "rel_volume_10d", "session_fraction",
            "dollar_volume", "avg_dollar_volume", "day_range_pct", "gap_pct",
            "gap_filled", "gap_held", "true_range", "atr_pct", "sma_spread",
            "intraday_pct", "earnings_yield", "eps_growth", "payout_ratio",
-           "turnover_pct", "volume_trend", "pe_spread", "rs_market",
+           "turnover_pct", "volume_trend", "pe_spread", "pb_spread", "rs_market",
            "ext_confirms", "cap_rank_sector", "sector_rank", "earnings_soon"]
 
 # Joined onto the frame from the corporate calendar (app/calendars.py)
@@ -138,6 +138,8 @@ STATIC_SAFE = {
     "volume_trend",
     # Built entirely from `pe`, itself already static-safe.
     "pe_spread",
+    # Same reasoning, built entirely from `pb`.
+    "pb_spread",
     # A rank among `market_cap` and `sector`, both already static-safe —
     # a stock does not jump past a sector peer from a few hours of drift.
     "cap_rank_sector",
@@ -206,7 +208,7 @@ ALIASES = {
     "rs": "rs_sector", "vssector": "rs_sector",
     "sectorchg": "sector_change_pct",
     "rsmkt": "rs_market", "vsmarket": "rs_market", "rsmarket": "rs_market",
-    "pespread": "pe_spread",
+    "pespread": "pe_spread", "pbspread": "pb_spread",
     "caprank": "cap_rank_sector", "sectorcaprank": "cap_rank_sector",
     "sectorrank": "sector_rank", "sectorperf": "sector_rank",
     # The dividend calendar. `exdiv` is the one people reach for — days

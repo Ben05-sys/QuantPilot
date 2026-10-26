@@ -558,6 +558,22 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
             df["pe"].where(df["pe"] > 0) - sector_pe, sector_pe) * 100
     else:
         df["pe_spread"] = np.nan
+    # P/B against the stock's own sector average, as a percent — the same
+    # question `pe_spread` asks, for a name whose P/E is meaningless because
+    # it has no earnings. Negative book value is its own kind of meaningless
+    # (liabilities exceed assets), so it is excluded from the average and
+    # gets a null spread of its own, same as a loss-maker above.
+    if "sector" in df.columns and "pb" in df.columns:
+        pb_w = df["market_cap"].fillna(0).where(df["pb"] > 0, 0)
+        pb_parts = pd.DataFrame(
+            {"sector": df["sector"], "w": pb_w, "pw": df["pb"].fillna(0) * pb_w})
+        pb_agg = pb_parts.groupby("sector", dropna=True).agg(
+            w=("w", "sum"), pw=("pw", "sum"))
+        sector_pb = df["sector"].map(pb_agg["pw"] / pb_agg["w"].replace(0, np.nan))
+        df["pb_spread"] = safe(
+            df["pb"].where(df["pb"] > 0) - sector_pb, sector_pb) * 100
+    else:
+        df["pb_spread"] = np.nan
     # Payout ratio: the dividend as a percent of trailing EPS — is the
     # dividend actually covered by earnings, or is it being paid out of
     # reserves. Null rather than negative when the name is loss-making:

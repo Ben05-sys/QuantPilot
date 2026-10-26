@@ -2912,6 +2912,10 @@ function renderTicker(d){
   kvc("EPS growth", fpct(st.eps_growth,1), st.eps_growth);
   kv("Forward P/E", nf(st.forward_pe,2));
   kv("P/B", nf(st.pb,2));
+  // The same "rich or cheap against its own sector" question pe_spread
+  // asks, for a name whose P/E is blank because it has no earnings — book
+  // value doesn't need a profit to exist.
+  kvc("P/B vs sector", fpct(st.pb_spread,1), st.pb_spread);
   kv("EPS ttm", nf(st.eps_ttm,2));
   kv("EPS fwd", nf(st.eps_forward,2));
   kv("Dividend %", nf(st.dividend_yield,2));
