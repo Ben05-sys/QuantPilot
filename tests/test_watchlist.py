@@ -15,4 +15,12 @@ with_basis = watchlist.enrich(
     [{"symbol": "BBB", "shares": 4.0, "cost_basis": 15.0}], quotes)[0]
 assert with_basis["market_value"] == 80.0
 assert with_basis["pnl"] == (20.0 - 15.0) * 4.0
-print("4 passed, 0 failed")
+
+# A cost basis of exactly $0 (gifted or granted shares) is a real value,
+# not a missing one — the dollar P&L is the full market value, even
+# though the percent gain has no basis to be computed against.
+zero_basis = watchlist.enrich(
+    [{"symbol": "AAA", "shares": 10.0, "cost_basis": 0.0}], quotes)[0]
+assert zero_basis["pnl"] == 500.0, "a $0 basis is known, not missing"
+assert zero_basis["pnl_pct"] is None, "percent gain from $0 is undefined"
+print("5 passed, 0 failed")

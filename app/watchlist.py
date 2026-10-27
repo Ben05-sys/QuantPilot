@@ -78,7 +78,11 @@ def enrich(rows: list[dict], quotes: dict) -> list[dict]:
         price = q.get("price")
         item["market_value"] = (shares * price
                                 if shares and price is not None else None)
-        if shares and basis and price is not None:
+        # `basis` as a truthiness check reads a real $0 cost basis — gifted
+        # or granted shares, not an uncommon position to be watching — the
+        # same way it reads a never-entered one: no P&L at all. `is not
+        # None` is the only test that tells the two apart.
+        if shares and basis is not None and price is not None:
             item["pnl"] = (price - basis) * shares
             item["pnl_pct"] = ((price - basis) / basis * 100) if basis else None
         else:

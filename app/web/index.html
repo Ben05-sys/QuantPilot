@@ -1970,9 +1970,11 @@ function applyWatchTicks(quotes){
     if(q.price!=null){ r.price = q.price; touched = true; }
     if(q.change_pct!=null) r.change_pct = q.change_pct;
     if(r.shares && r.price!=null) r.market_value = r.shares * r.price;
-    if(r.shares && r.cost_basis && r.price!=null){
+    // cost_basis of exactly 0 is a real value (gifted/granted shares), not
+    // a missing one — `!= null` is what tells the two apart.
+    if(r.shares && r.cost_basis!=null && r.price!=null){
       r.pnl = (r.price - r.cost_basis) * r.shares;
-      r.pnl_pct = (r.price - r.cost_basis) / r.cost_basis * 100;
+      r.pnl_pct = r.cost_basis ? (r.price - r.cost_basis) / r.cost_basis * 100 : null;
     }
   }
   if(touched) drawWatch();
