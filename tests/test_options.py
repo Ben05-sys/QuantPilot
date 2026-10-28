@@ -162,6 +162,21 @@ def run():
     check("a missing volume field stays null, not a guessed zero",
           unknown["vol_oi"] is None)
 
+    print("\nnotional treats a real zero as a zero, not a null")
+    dead = dict(fixture())
+    dead["contracts"] = dead["contracts"] + [{
+        "contract": "TDEAD", "expiry": "2026-08-07", "type": "call",
+        "strike": 149.0, "bid": 0.0, "ask": 0.0, "last": 0.0,
+        "volume": 5000.0, "open_interest": 100.0, "iv": 0.9,
+        "delta": 0.01, "gamma": 0.0, "theta": -0.01, "vega": 0.0,
+        "rho": 0.0, "theo": 0.0,
+    }]
+    cboe.chain = lambda symbol, ttl=600: dead
+    worthless = next(r for r in options.unusual("TEST")["rows"]
+                     if r["contract"] == "TDEAD")
+    check("a $0 mid against real volume is a $0 notional, not a blank",
+          worthless["notional"] == 0.0, worthless["notional"])
+
     print("\nempty chain")
     empty = dict(fixture())
     empty["contracts"] = []

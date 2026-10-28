@@ -165,7 +165,12 @@ def unusual(symbol: str, min_volume: float = MIN_UNUSUAL_VOLUME,
             "strike": strike,
             # Notional at the mid, which is what makes a row worth
             # noticing: 60,000 contracts at $0.02 is not a big trade.
-            "notional": ((leg["mid"] or 0) * volume * 100) or None,
+            # `or None` used to collapse that genuine $0 (a dead contract
+            # with bid and ask both at zero, still trading real size) into
+            # the same null a missing mid gets — the exact mistake vol_oi
+            # was already fixed for above.
+            "notional": (leg["mid"] * volume * 100)
+                        if leg["mid"] is not None else None,
             "moneyness": ((strike - spot) / spot * 100)
                          if (strike is not None and spot) else None,
         })
