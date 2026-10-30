@@ -2942,6 +2942,12 @@ function renderTicker(d){
   kv("Next ex-div", st.ex_div_ts!=null
      ? edate(st.ex_div_ts)+" ("+Math.round(st.ex_div_days)+"d, "
        +nf(st.div_drop_pct,2)+"% drop)" : "—");
+  // Ex-date is when the price adjusts; pay date is when the cash actually
+  // lands, often a couple weeks later. universe.py already computes
+  // div_pay_days from the calendar join — this was the one date on that
+  // join with no row of its own. Blank, not a guess, same as ex-div above.
+  kv("Dividend pay date", st.div_pay_ts!=null
+     ? edate(st.div_pay_ts)+" ("+Math.round(st.div_pay_days)+"d)" : "—");
   kv("Shares out", fcap(st.shares_outstanding));
 
   rows.push(`<div class="sect">TREND</div>`);
