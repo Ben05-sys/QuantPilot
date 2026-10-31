@@ -2948,6 +2948,13 @@ function renderTicker(d){
   // join with no row of its own. Blank, not a guess, same as ex-div above.
   kv("Dividend pay date", st.div_pay_ts!=null
      ? edate(st.div_pay_ts)+" ("+Math.round(st.div_pay_days)+"d)" : "—");
+  // Record date is who gets paid, not who can trade without losing the
+  // dividend — that's the ex-date above. The two usually land close
+  // together but are not the same question, and the ex-div board already
+  // shows this per day; this was the one calendar date on the join still
+  // missing from the single-stock view. Blank, not a guess, same convention.
+  kv("Dividend record date", st.div_record_ts!=null
+     ? edate(st.div_record_ts)+" ("+Math.round(st.div_record_days)+"d)" : "—");
   kv("Shares out", fcap(st.shares_outstanding));
 
   rows.push(`<div class="sect">TREND</div>`);
