@@ -206,6 +206,10 @@ def main():
           abs(by["KO"]["div_yield_upcoming"] - (2.04 / 71.0 * 100)) < 1e-9)
     check("record and pay days are counted too",
           abs(by["KO"]["div_pay_days"] - 20) < 0.01)
+    check("declared days is negative — the announcement is always behind "
+          "us by the time a dividend reaches the calendar",
+          abs(by["KO"]["div_declared_days"] - (-10)) < 0.01,
+          by["KO"]["div_declared_days"])
 
     print("\nwhat may be narrowed before re-pricing")
     check("a declared ex-date does not move, so it narrows safely stale",
@@ -214,6 +218,9 @@ def main():
     check("nor do the four dates themselves",
           all(c in screen.STATIC_SAFE for c in
               ("ex_div_ts", "div_record_ts", "div_pay_ts", "div_declared_ts")))
+    check("nor the declared day count, same reasoning as the other three",
+          "div_declared_days" in screen.STATIC_SAFE
+          and "div_declared_days" not in screen.LIVE_COLUMNS)
     check("nor the cash amount, which is fixed when it is declared",
           "div_amount" in screen.STATIC_SAFE)
     check("but the drop is a fraction of today's price, so it is live",

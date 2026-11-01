@@ -2955,6 +2955,12 @@ function renderTicker(d){
   // missing from the single-stock view. Blank, not a guess, same convention.
   kv("Dividend record date", st.div_record_ts!=null
      ? edate(st.div_record_ts)+" ("+Math.round(st.div_record_days)+"d)" : "—");
+  // When the board announced this payment, the one date of the four on
+  // the calendar join still missing from this panel. Always in the past
+  // by the time a dividend reaches the calendar, so the day count below
+  // reads negative, same convention as the other three.
+  kv("Dividend declared", st.div_declared_ts!=null
+     ? edate(st.div_declared_ts)+" ("+Math.round(st.div_declared_days)+"d)" : "—");
   kv("Shares out", fcap(st.shares_outstanding));
 
   rows.push(`<div class="sect">TREND</div>`);

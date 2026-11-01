@@ -476,6 +476,12 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
         df["ex_div_days"] = (df["ex_div_ts"] - now) / 86400.0
         df["div_record_days"] = (df["div_record_ts"] - now) / 86400.0
         df["div_pay_days"] = (df["div_pay_ts"] - now) / 86400.0
+        # When the board announced the payment — always in the past by the
+        # time a dividend reaches the calendar, so this is consistently
+        # negative, same sign convention as the other three. The one date
+        # of the four with no day count of its own, and the one that says
+        # how fresh the declaration is rather than how soon the payment is.
+        df["div_declared_days"] = (df["div_declared_ts"] - now) / 86400.0
         # What the upcoming payment alone is worth against today's price,
         # as a percent — the size of the drop to expect on the ex-date.
         # Distinct from `dividend_yield`, which is annual: on a quarterly
@@ -490,7 +496,8 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
                                         df["price"])
     else:
         for col in ("ex_div_days", "div_record_days", "div_pay_days",
-                    "div_drop_pct", "div_yield_upcoming"):
+                    "div_declared_days", "div_drop_pct",
+                    "div_yield_upcoming"):
             df[col] = np.nan
 
     # Days since listing, for screening what has just come to market. Only

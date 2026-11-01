@@ -52,6 +52,7 @@ DERIVED = ["rel_volume", "rel_volume_raw", "rel_volume_10d", "session_fraction",
 CALENDAR = ["ex_div_ts", "div_record_ts", "div_pay_ts", "div_declared_ts",
             "div_amount", "div_annual_amount",
             "ex_div_days", "div_record_days", "div_pay_days",
+            "div_declared_days",
             "div_drop_pct", "div_yield_upcoming", "ipo_age_years"]
 
 COLUMNS = [n for n, _ in store.UNIVERSE_COLUMNS] + DERIVED + CALENDAR
@@ -151,7 +152,7 @@ STATIC_SAFE = {
     # stale the way a stored figure would.
     "ex_div_ts", "div_record_ts", "div_pay_ts", "div_declared_ts",
     "div_amount", "div_annual_amount",
-    "ex_div_days", "div_record_days", "div_pay_days",
+    "ex_div_days", "div_record_days", "div_pay_days", "div_declared_days",
     "ipo_age_years",
 }
 
