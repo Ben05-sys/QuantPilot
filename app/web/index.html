@@ -2942,6 +2942,12 @@ function renderTicker(d){
   kv("Next ex-div", st.ex_div_ts!=null
      ? edate(st.ex_div_ts)+" ("+Math.round(st.ex_div_days)+"d, "
        +nf(st.div_drop_pct,2)+"% drop)" : "—");
+  // "Next ex-div" above states the drop only as a percent of price; the
+  // absolute per-share figure it's computed from matters on its own for
+  // sizing a position, and the ex-div board already lists it per name
+  // with no way to read it for just this one stock. Blank, not a guess,
+  // same convention as the dates beside it.
+  kv("Dividend amount", st.div_amount!=null ? nf(st.div_amount,4) : "—");
   // Ex-date is when the price adjusts; pay date is when the cash actually
   // lands, often a couple weeks later. universe.py already computes
   // div_pay_days from the calendar join — this was the one date on that
