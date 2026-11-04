@@ -50,14 +50,15 @@ class Quote:
         change %). Which one is live is decided by the venue's own
         market_state, not by our clock.
 
-        POSTPOST is the overnight gap after after-hours closes: the last
-        post-market print is still the most recent trade, so it keeps being
-        reported until the pre-market opens.
+        POSTPOST and PREPRE are the two halves of the same overnight gap —
+        Yahoo's name flips at midnight, not at a session boundary — and the
+        last post-market print is still the most recent trade through both
+        of them, so it keeps being reported until the pre-market opens.
         """
         state = (self.market_state or "").upper()
         if state == "PRE" and self.pre_price is not None:
             return "PRE", self.pre_price, self.pre_change_pct
-        if state in ("POST", "POSTPOST") and self.post_price is not None:
+        if state in ("POST", "POSTPOST", "PREPRE") and self.post_price is not None:
             return "AH", self.post_price, self.post_change_pct
         return None, None, None
 

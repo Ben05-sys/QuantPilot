@@ -27,6 +27,7 @@ TMP = Path(tempfile.mkdtemp(prefix="quantpilot-srv-"))
 os.environ["QUANTPILOT_HOME"] = str(TMP)
 
 from app import calendars, config, screen, server, store, stream, universe  # noqa: E402
+from app.providers.base import Quote  # noqa: E402
 
 PASS = FAIL = SKIP = 0
 
@@ -355,6 +356,21 @@ def main():
         check("SSE rejects a bad token", False, "it was accepted")
     except urllib.error.HTTPError as exc:
         check("SSE rejects a bad token", exc.code == 403)
+
+    print("\nthe overnight print survives Yahoo's midnight relabel")
+    # POSTPOST and PREPRE are the same overnight gap under two names —
+    # Yahoo's label flips at midnight, not at a session boundary — so a
+    # post-market print that is still the latest trade must keep being
+    # reported through both, not go null the moment the label changes.
+    overnight = Quote("NVDA", post_price=192.0, post_change_pct=1.1)
+    for label in ("POST", "POSTPOST", "PREPRE"):
+        overnight.market_state = label
+        got = overnight.extended()
+        check(f"{label}: the post-market print still reports",
+              got == ("AH", 192.0, 1.1), got)
+    overnight.market_state = "PRE"
+    check("PRE: the pre-market print takes over instead",
+          overnight.extended() == (None, None, None))
 
     print("\na closed market must not flash")
     # A websocket tick outside regular hours is an extended-hours print on
