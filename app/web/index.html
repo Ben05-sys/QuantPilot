@@ -2818,6 +2818,11 @@ function renderTicker(d){
   // one stock against that sector. #1 is the day's leading sector.
   kv("Sector rank today", st.sector_rank!=null
      ? "#"+Math.round(st.sector_rank) : "—");
+  // "Sector rank today" above gives the ordinal, not the size of the
+  // move it's ranked on — a #1 sector up 4% and one up 0.3% both read
+  // as "#1" without this. Cap-weighted the same way the grid's RS column
+  // (rs_sector = chg - this) already is, just never shown on its own.
+  kvc("Sector chg %", fpct(st.sector_change_pct,2), st.sector_change_pct);
   kv("Industry", esc(st.industry||"—"));
   kv("Exchange", esc(st.exchange||"—"));
   // Years since listing, from ipo_year in the snapshot — computed in
