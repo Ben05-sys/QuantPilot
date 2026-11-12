@@ -2935,6 +2935,14 @@ function renderTicker(d){
   // when a payer has just raised or cut, which is exactly when someone
   // is looking. Blank until the calendar's indicated rate is known.
   kv("Indicated yield %", nf(st.div_yield_upcoming,2));
+  // The dollar rate "Indicated yield %" is actually a percent of — on
+  // the calendar join since the first dividend-board commit and already
+  // screenable as divannual, but never its own row, so there was no way
+  // to see the annual figure itself rather than what it is of price.
+  // Null, same as the yield built from it, on a special or irregular
+  // payer with no recurring rate to indicate.
+  kv("Indicated annual $", st.div_annual_amount!=null
+     ? nf(st.div_annual_amount,4) : "—");
   // Dividend rate against trailing EPS — is the payment actually earned,
   // or funded from reserves. Blank on a loss-making payer, computed that
   // way in universe.py so a negative EPS never turns into a ratio.
