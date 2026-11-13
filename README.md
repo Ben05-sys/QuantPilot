@@ -139,8 +139,11 @@ links through to the chart; the rest are dimmed.
 average change, as geographic bubbles or as equal tiles. Click a country
 to screen it.
 
-**ADRs** (`F7`) — the 276 foreign companies listed on US exchanges
-through depositary receipts, with country as a first-class column.
+**ADRs** (`F7`) — the foreign companies listed on US exchanges through
+depositary receipts, with country as a first-class column. The view's
+own header counts them live off the current snapshot, rather than a
+number pinned here that the next upstream rewording would quietly make
+wrong.
 
 **Earnings** (`F8`) — who reports over the next days, grouped by exchange
 day, split into **BMO** (before the open) and **AMC** (after the close),
