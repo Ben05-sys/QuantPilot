@@ -855,6 +855,24 @@ def main():
           "payout_ratio" in screen.STATIC_SAFE
           and "payout_ratio" not in screen.LIVE_COLUMNS)
 
+    pr2 = derive(pd.DataFrame({
+        "symbol": ["RAISED", "NOCAL"], "name": ["R", "N"], "sector": ["T"] * 2,
+        "price": [50.0, 50.0], "change_pct": [0.0] * 2,
+        "volume": [1e6] * 2, "avg_volume_3m": [1e6] * 2, "market_cap": [1e9] * 2,
+        "week52_high": [60.0] * 2, "week52_low": [40.0] * 2,
+        "sma50": [50.0] * 2, "sma200": [50.0] * 2,
+        "eps_ttm": [4.0, 4.0], "dividend_rate": [1.0, 1.0],
+        "div_annual_amount": [2.0, np.nan], "earnings_ts": [np.nan] * 2,
+    }))
+    pr2row = dict(zip(pr2["symbol"], pr2.to_dict("records"), strict=True))
+    check("a payer that just raised uses Nasdaq's new indicated rate, not "
+          "Yahoo's stale trailing one",
+          abs(pr2row["RAISED"]["payout_ratio"] - 50.0) < 1e-9,
+          pr2row["RAISED"]["payout_ratio"])
+    check("no indicated rate on the calendar falls back to trailing dividend_rate",
+          abs(pr2row["NOCAL"]["payout_ratio"] - 25.0) < 1e-9,
+          pr2row["NOCAL"]["payout_ratio"])
+
     print("\nturnover")
     tv = derive(pd.DataFrame({
         "symbol": ["ACTIVE", "NOFLOAT"], "name": ["A", "N"], "sector": ["T"] * 2,

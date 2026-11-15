@@ -587,9 +587,20 @@ def derive(df: pd.DataFrame) -> pd.DataFrame:
     # dividing by a negative eps_ttm would flip the sign into a small
     # positive-looking number that reads like a *safe*, well-covered payout
     # when the truth is there is no earnings to cover it from at all.
+    #
+    # Prefer Nasdaq's indicated annual rate over Yahoo's trailing
+    # `dividend_rate` where the calendar has one, same reason
+    # `div_yield_upcoming` does: the trailing figure is last year's
+    # commitment, and disagrees with the current one exactly when a payer
+    # has just raised or cut — a "Covered Dividend" screen built on the
+    # stale rate can call a just-cut payout safe or a just-raised one
+    # risky on a number that no longer describes the payment.
     if "dividend_rate" in df.columns and "eps_ttm" in df.columns:
-        df["payout_ratio"] = safe(df["dividend_rate"],
-                                   df["eps_ttm"].where(df["eps_ttm"] > 0)) * 100
+        rate = df["dividend_rate"]
+        if "div_annual_amount" in df.columns:
+            rate = df["div_annual_amount"].where(
+                df["div_annual_amount"].notna(), rate)
+        df["payout_ratio"] = safe(rate, df["eps_ttm"].where(df["eps_ttm"] > 0)) * 100
     else:
         df["payout_ratio"] = np.nan
     # ADRs, from the security type Nasdaq puts in the name. Derived rather
