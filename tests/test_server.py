@@ -363,11 +363,14 @@ def main():
     # post-market print that is still the latest trade must keep being
     # reported through both, not go null the moment the label changes.
     overnight = Quote("NVDA", post_price=192.0, post_change_pct=1.1)
-    for label in ("POST", "POSTPOST", "PREPRE"):
+    overnight.market_state = "POST"
+    check("POST: the post-market print reports as AH",
+          overnight.extended() == ("AH", 192.0, 1.1), overnight.extended())
+    for label in ("POSTPOST", "PREPRE"):
         overnight.market_state = label
         got = overnight.extended()
-        check(f"{label}: the post-market print still reports",
-              got == ("AH", 192.0, 1.1), got)
+        check(f"{label}: the same print now reports as ON, matching "
+              "session_label()", got == ("ON", 192.0, 1.1), got)
     overnight.market_state = "PRE"
     check("PRE: the pre-market print takes over instead",
           overnight.extended() == (None, None, None))

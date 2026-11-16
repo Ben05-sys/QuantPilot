@@ -54,12 +54,21 @@ class Quote:
         Yahoo's name flips at midnight, not at a session boundary — and the
         last post-market print is still the most recent trade through both
         of them, so it keeps being reported until the pre-market opens.
+        Labelled "ON", not "AH" — server.py's session_label() already draws
+        that line for the same reason: a tick straight off the socket during
+        this gap is a different window from the first couple of hours after
+        the close, and a symbol with no live tick right now (most of the
+        universe, between rolling re-quotes) was reporting the wrong one of
+        the two here, the one place this label is built from a REST quote
+        rather than the stream.
         """
         state = (self.market_state or "").upper()
         if state == "PRE" and self.pre_price is not None:
             return "PRE", self.pre_price, self.pre_change_pct
-        if state in ("POST", "POSTPOST", "PREPRE") and self.post_price is not None:
+        if state == "POST" and self.post_price is not None:
             return "AH", self.post_price, self.post_change_pct
+        if state in ("POSTPOST", "PREPRE") and self.post_price is not None:
+            return "ON", self.post_price, self.post_change_pct
         return None, None, None
 
 
