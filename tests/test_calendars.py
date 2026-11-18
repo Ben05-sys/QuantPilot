@@ -70,7 +70,8 @@ def frame():
     suite asserts on — it runs the real `derive`, because the point is
     that these fields survive the same pipeline every other column does.
     """
-    # `payout_ratio` is derived from dividend_rate over trailing EPS, not
+    # `payout_ratio` is derived from Nasdaq's indicated annual dividend
+    # (falling back to Yahoo's dividend_rate), over trailing EPS — not
     # stored, so it is set through its inputs — writing the ratio directly
     # would be silently overwritten by derive() and the assertions below
     # would be testing a column the real pipeline never produces.
@@ -87,9 +88,14 @@ def frame():
                      ("volume", 1e7), ("avg_volume_3m", 1.2e7),
                      ("week52_high", 200.0), ("week52_low", 60.0),
                      ("sma50", 150.0), ("sma200", 140.0),
-                     ("earnings_ts", np.nan), ("ipo_year", np.nan),
-                     ("eps_ttm", 2.0)]:
+                     ("earnings_ts", np.nan), ("ipo_year", np.nan)]:
         df[col] = val
+    # KO's own, not the shared 2.0 below: payout_ratio weighs the
+    # calendar's indicated annual dividend (2.04, set further down)
+    # against this, and the "covered payer" scenario needs that division
+    # to actually land under 80 — 2.0 would read KO as over-distributing
+    # on a number that has nothing to do with the scenario being tested.
+    df["eps_ttm"] = [3.0, 2.0, 2.0, 2.0]
     return df
 
 
