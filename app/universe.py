@@ -238,16 +238,20 @@ def _earnings_soon(days: pd.Series, when: pd.Series, state: pd.Series) -> pd.Ser
     """Under 24h out, on the session-boundary side that makes it tonight's
     risk. Null, never False, with no date or session state to judge it.
 
-    A BMO report due before the *next* open is exactly as much overnight
-    risk, while the regular session is still open, as an AMC report due
-    after *tonight's* close — both land in the same closed window between
-    now and the next bell. Only `~regular & bmo` used to catch the BMO
-    side, missing it while the session was still live.
+    A BMO report is never *not* overnight risk once it's under 24h out —
+    it happens before any open, so `bmo` needs no session check at all.
+    `amc` is the mirror case, but the previous fix only carried it through
+    the regular session (`regular & amc`): once the close actually passed
+    and state flipped to POST, a still-unreleased AMC print read as safe
+    again, as if closing the exchange had made the report go away. True
+    from the moment the regular session closes — REGULAR itself, or any
+    hour after — right up to the print; false only during *today's own*
+    PRE session, which still has the whole regular day ahead of it before
+    tonight's close.
     """
-    regular, known = state == "REGULAR", state.notna()
+    pre, known = state == "PRE", state.notna()
     dmh, amc, bmo = when == "DMH", when == "AMC", when == "BMO"
-    soon = days.between(0, 1, inclusive="left") & (
-        dmh | (regular & (amc | bmo)) | (~regular & bmo))
+    soon = days.between(0, 1, inclusive="left") & (dmh | bmo | (amc & ~pre))
     return soon.where(when.notna() & (dmh | known), None)
 
 
