@@ -653,6 +653,13 @@ FILTER_SPECS = [
         ("Above both", "fromsma50 > 0 and fromsma200 > 0"),
         ("Below both", "fromsma50 < 0 and fromsma200 < 0"),
         ("Golden cross", "sma50 > sma200")]),
+    # True range as a percent of price — already screenable by typing
+    # `atr`, but with no dropdown entry a filter-bar-only user had no way
+    # to ask for it at all.
+    ("atr", "Volatility (ATR%)", [
+        ("Any", ""), ("Quiet <2%", "atrpct < 2"),
+        ("Normal 2-6%", "2 < atrpct < 6"),
+        ("Wild 6%+", "atrpct > 6")]),
     ("div", "Dividend", [
         ("Any", ""), ("Pays", "div > 0"), ("Over 2%", "div > 2"),
         ("Over 4%", "div > 4"), ("None", "div == 0 or div != div")]),

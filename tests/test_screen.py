@@ -212,6 +212,14 @@ def main():
           all(isinstance(screen.mask(df, frag), pd.Series)
               for _, _, opts in screen.FILTER_SPECS
               for _, frag in opts))
+    wild = screen.filters_to_expr({"atr": "Wild 6%+"})
+    check("ATR dropdown picks only the name realized moving that hard",
+          syms(df[screen.mask(df, wild)]) == ["PENNY"],
+          syms(df[screen.mask(df, wild)]))
+    quiet = screen.filters_to_expr({"atr": "Quiet <2%"})
+    check("and the quiet bucket catches the rest of that same range",
+          syms(df[screen.mask(df, quiet)]) == ["AAPL", "JNJ", "SPY"],
+          syms(df[screen.mask(df, quiet)]))
     check("describe splits top-level ands",
           screen.describe("mcap > 10b and chg > 3") ==
           ["mcap > 10b", "chg > 3"],
