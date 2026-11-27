@@ -437,13 +437,13 @@ def main():
 
     print("\nearnings-soon overnight exposure")
     from app.universe import _earnings_soon
-    idx = ["AMC_OPEN", "AMC_SHUT", "AMC_WAIT", "AMC_NIGHT", "BMO_SHUT",
-           "BMO_OPEN", "NOSTATE"]
-    days = pd.Series([0.3] * 7, index=idx)
-    when = pd.Series(["AMC", "AMC", "AMC", "AMC", "BMO", "BMO", "AMC"],
+    idx = ["AMC_OPEN", "AMC_SHUT", "AMC_WAIT", "AMC_NIGHT", "AMC_PREV_EVE",
+           "BMO_SHUT", "BMO_OPEN", "NOSTATE"]
+    days = pd.Series([0.3] * 8, index=idx)
+    when = pd.Series(["AMC", "AMC", "AMC", "AMC", "AMC", "BMO", "BMO", "AMC"],
                      index=idx)
-    state = pd.Series(["REGULAR", "POST", "PRE", "PREPRE", "PRE",
-                       "REGULAR", None], index=idx)
+    state = pd.Series(["REGULAR", "POST", "PRE", "PREPRE", "POSTPOST",
+                       "PRE", "REGULAR", None], index=idx)
     soon = _earnings_soon(days, when, state)
     check("AMC tonight while the session is open is overnight risk",
           soon["AMC_OPEN"] is True)
@@ -458,6 +458,10 @@ def main():
           "today's own pre-market has even opened, not just once PRE "
           "has started",
           soon["AMC_NIGHT"] is False)
+    check("same AMC report is not yet risk the evening before, either — "
+          "POSTPOST is still hours ahead of tomorrow's own regular "
+          "session, not the report's own POSTPOST after the print",
+          soon["AMC_PREV_EVE"] is False)
     check("BMO before tomorrow's open, session already shut, is risk",
           soon["BMO_SHUT"] is True)
     check("BMO before tomorrow's open is the same overnight risk while "

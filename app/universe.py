@@ -240,18 +240,19 @@ def _earnings_soon(days: pd.Series, when: pd.Series, state: pd.Series) -> pd.Ser
 
     A BMO report is never *not* overnight risk once it's under 24h out —
     it happens before any open, so `bmo` needs no session check at all.
-    `amc` is the mirror case, but the previous fix only excluded `PRE`,
-    missing `PREPRE` — the small hours before pre-market opens, when an
-    AMC report due after *today's* close is already under 24h away by the
-    clock but the entire regular session is still ahead to exit before
-    it. That left a report misread as tonight's risk hours before today's
-    own pre-market had even started. True from the moment the regular
-    session closes — REGULAR itself, or any hour after — right up to the
-    print; false only during *today's own* PRE or PREPRE hours, which
-    still have the whole regular day ahead of them before tonight's
-    close.
+    `amc` is the mirror case, but the previous two fixes only excluded
+    `PRE` and `PREPRE`, missing `POSTPOST` — 8pm to midnight the evening
+    *before* the report, already under 24h away by the clock with the
+    whole regular session still ahead to exit before tonight's close.
+    `POSTPOST` costs nothing on the report's own day: AMC releases
+    cluster tight to the close, so by 8pm the print has already
+    happened and `days` has already gone negative, which is what keeps
+    a genuinely late print from being hidden by this exclusion. True
+    from the moment the regular session opens; false through PREPRE,
+    PRE and the evening-before POSTPOST, which between them cover every
+    hour before that open.
     """
-    pre, known = state.isin(("PRE", "PREPRE")), state.notna()
+    pre, known = state.isin(("PRE", "PREPRE", "POSTPOST")), state.notna()
     dmh, amc, bmo = when == "DMH", when == "AMC", when == "BMO"
     soon = days.between(0, 1, inclusive="left") & (dmh | bmo | (amc & ~pre))
     return soon.where(when.notna() & (dmh | known), None)
