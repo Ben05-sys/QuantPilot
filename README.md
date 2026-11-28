@@ -94,11 +94,12 @@ from anywhere; right-click the tray icon for Open / Refresh / Quit.
 ## What it does
 
 **Screener** (`F2`) — the whole listed universe in a dense sortable grid.
-Fifteen Finviz-style dropdowns (sector, market cap, price, P/E, change,
-relative volume, volume, 52-week range, moving averages, dividend,
-earnings, extended hours, country, ADR, type) plus a command line that
-takes free-text expressions. The grid virtualizes, so 7,000 rows scroll
-like 40. Prices tick in place, **green on an uptick and red on a
+Eighteen Finviz-style dropdowns (sector, market cap, price, P/E, change,
+relative volume, volume, dollar volume, 52-week range, moving averages,
+volatility, dividend, ex-dividend, earnings, extended hours, country,
+ADR, type) plus a command line that takes free-text expressions. The
+grid virtualizes, so 7,000 rows scroll like 40. Prices tick in place,
+**green on an uptick and red on a
 downtick**.
 
 **Heatmap** (`F3`) — squarified treemap grouped by sector, sized by market
